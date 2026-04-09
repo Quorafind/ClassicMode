@@ -4,6 +4,8 @@ Play Slay the Spire 2 characters with **Slay the Spire 1** card pools, relic
 pools, and boss content. Classic Cards, Classic Relics, and Classic Bosses
 can be toggled independently on the character-select screen.
 
+> 中文说明请见 [README.zh-CN.md](README.zh-CN.md)
+
 ## Requirements
 
 To build this mod you need:
