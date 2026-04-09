@@ -2,6 +2,7 @@ using System.Reflection;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.CardPools;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary;
 
 namespace ClassicModeMod;
@@ -37,6 +38,18 @@ internal static class CardLibraryRefreshPatch
     private static readonly FieldInfo? _allCardsField =
         typeof(NCardLibraryGrid).GetField("_allCards", BindingFlags.Instance | BindingFlags.NonPublic);
 
+    private static readonly FieldInfo? _poolFiltersField =
+        typeof(NCardLibrary).GetField("_poolFilters", BindingFlags.Instance | BindingFlags.NonPublic);
+
+    private static readonly FieldInfo? _ironcladFilterField =
+        typeof(NCardLibrary).GetField("_ironcladFilter", BindingFlags.Instance | BindingFlags.NonPublic);
+
+    private static readonly FieldInfo? _silentFilterField =
+        typeof(NCardLibrary).GetField("_silentFilter", BindingFlags.Instance | BindingFlags.NonPublic);
+
+    private static readonly FieldInfo? _defectFilterField =
+        typeof(NCardLibrary).GetField("_defectFilter", BindingFlags.Instance | BindingFlags.NonPublic);
+
     static void Prefix(NCardLibrary __instance)
     {
         try
@@ -55,6 +68,12 @@ internal static class CardLibraryRefreshPatch
                 Log.Warn("[ClassicMode] CardLibrary refresh: grid._allCards field not found");
                 return;
             }
+
+            // The vanilla card library class filters by strict pool types
+            // (e.g. c.Pool is IroncladCardPool). In hybrid mode many cards
+            // resolve to Hybrid* pools and get excluded from class tabs.
+            // Extend the predicates to include classic + hybrid pool models.
+            PatchCharacterPoolFilters(__instance);
 
             int before = allCards.Count;
             allCards.Clear();
@@ -82,6 +101,34 @@ internal static class CardLibraryRefreshPatch
         catch (Exception ex)
         {
             Log.Error($"[ClassicMode] Failed to refresh card library grid: {ex.Message}");
+        }
+    }
+
+    private static void PatchCharacterPoolFilters(NCardLibrary library)
+    {
+        if (_poolFiltersField?.GetValue(library) is not Dictionary<NCardPoolFilter, Func<CardModel, bool>> poolFilters)
+            return;
+
+        var ironcladFilter = _ironcladFilterField?.GetValue(library) as NCardPoolFilter;
+        var silentFilter = _silentFilterField?.GetValue(library) as NCardPoolFilter;
+        var defectFilter = _defectFilterField?.GetValue(library) as NCardPoolFilter;
+
+        if (ironcladFilter != null)
+        {
+            poolFilters[ironcladFilter] = c =>
+                c.Pool is IroncladCardPool or ClassicIroncladCardPool or HybridIroncladCardPool;
+        }
+
+        if (silentFilter != null)
+        {
+            poolFilters[silentFilter] = c =>
+                c.Pool is SilentCardPool or ClassicSilentCardPool or HybridSilentCardPool;
+        }
+
+        if (defectFilter != null)
+        {
+            poolFilters[defectFilter] = c =>
+                c.Pool is DefectCardPool or ClassicDefectCardPool or HybridDefectCardPool;
         }
     }
 }
