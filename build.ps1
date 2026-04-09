@@ -1,5 +1,3 @@
-$ErrorActionPreference = "Stop"
-
 <#
 .SYNOPSIS
   Build the ClassicMode mod for Slay the Spire 2.
@@ -45,6 +43,8 @@ param(
   [string]$Sts1Dir,
   [switch]$SkipAssets
 )
+
+$ErrorActionPreference = "Stop"
 
 $modName = "ClassicMode"
 $projectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
