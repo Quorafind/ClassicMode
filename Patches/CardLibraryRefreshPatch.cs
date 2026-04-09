@@ -41,6 +41,10 @@ internal static class CardLibraryRefreshPatch
     {
         try
         {
+            // Ensure ModelDb card-pool snapshots are rebuilt for current toggles
+            // before we repopulate the grid-local caches.
+            HybridPoolCache.InvalidateAll();
+
             if (_gridField?.GetValue(__instance) is not NCardLibraryGrid grid)
             {
                 Log.Warn("[ClassicMode] CardLibrary refresh: grid field not found");
@@ -69,6 +73,9 @@ internal static class CardLibraryRefreshPatch
                 if (cmp != 0) return cmp;
                 return x.Id.CompareTo(y.Id);
             });
+
+            // Keep lock/seen state aligned with the rebuilt pool list.
+            grid.RefreshVisibility();
 
             Log.Info($"[ClassicMode] CardLibrary refreshed: {before} → {allCards.Count} cards");
         }

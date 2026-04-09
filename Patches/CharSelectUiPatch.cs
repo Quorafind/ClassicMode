@@ -51,6 +51,25 @@ internal static class ClassicModePanel
         _root.Visible = IsClassicCharacter(character);
     }
 
+    private static void RefreshCardToggleRows()
+    {
+        if (_cardsRow == null || _hybridRow == null || _dedupeRow == null)
+            return;
+
+        // Hybrid is mutually exclusive with pure classic card mode.
+        if (ClassicConfig.ClassicHybrid && ClassicConfig.ClassicCards)
+        {
+            ClassicConfig.ClassicCards = false;
+        }
+
+        _cardsRow.SetValueSilently(ClassicConfig.ClassicCards);
+        _hybridRow.SetValueSilently(ClassicConfig.ClassicHybrid);
+        _dedupeRow.SetValueSilently(ClassicConfig.HybridDedupe);
+
+        // Dedupe only has effect under Hybrid mode.
+        _dedupeRow.SetEnabled(ClassicConfig.ClassicHybrid);
+    }
+
     private static PanelContainer BuildPanel()
     {
         var font = GD.Load<Font>("res://themes/kreon_bold_glyph_space_two.tres");
@@ -105,7 +124,10 @@ internal static class ClassicModePanel
         _cardsRow = new TickboxRow("Classic Cards", "\u7ecf\u5178\u5361\u724c", font,
             ClassicConfig.ClassicCards, on =>
             {
+                if (on && ClassicConfig.ClassicHybrid)
+                    ClassicConfig.ClassicHybrid = false;
                 ClassicConfig.ClassicCards = on;
+                RefreshCardToggleRows();
                 Log.Info($"[ClassicMode] Classic Cards: {on}");
             });
         vbox.AddChild(_cardsRow);
@@ -134,6 +156,9 @@ internal static class ClassicModePanel
             ClassicConfig.ClassicHybrid, on =>
             {
                 ClassicConfig.ClassicHybrid = on;
+                if (on && ClassicConfig.ClassicCards)
+                    ClassicConfig.ClassicCards = false;
+                RefreshCardToggleRows();
                 Log.Info($"[ClassicMode] Hybrid Mode: {on}");
             });
         vbox.AddChild(_hybridRow);
@@ -142,10 +167,18 @@ internal static class ClassicModePanel
         _dedupeRow = new TickboxRow("Dedupe Overlaps", "\u540c\u540d\u53bb\u91cd\uff08\u7559\u4e8c\u4ee3\uff09", font,
             ClassicConfig.HybridDedupe, on =>
             {
+                if (!ClassicConfig.ClassicHybrid)
+                {
+                    RefreshCardToggleRows();
+                    return;
+                }
                 ClassicConfig.HybridDedupe = on;
+                RefreshCardToggleRows();
                 Log.Info($"[ClassicMode] Hybrid Dedupe: {on}");
             });
         vbox.AddChild(_dedupeRow);
+
+        RefreshCardToggleRows();
 
         return root;
     }
@@ -162,6 +195,7 @@ internal class TickboxRow : HBoxContainer
     private readonly Label _label;
     private readonly Action<bool> _onToggled;
     private bool _ticked;
+    private bool _enabled = true;
     private Tween? _tween;
     private readonly Vector2 _baseScale = Vector2.One;
 
@@ -184,10 +218,14 @@ internal class TickboxRow : HBoxContainer
         {
             BgColor = new Color(0.12f, 0.10f, 0.16f, 0.9f),
             BorderColor = _ticked ? StsColors.gold : new Color(0.4f, 0.35f, 0.25f, 0.8f),
-            BorderWidthTop = 2, BorderWidthBottom = 2,
-            BorderWidthLeft = 2, BorderWidthRight = 2,
-            CornerRadiusTopLeft = 4, CornerRadiusTopRight = 4,
-            CornerRadiusBottomLeft = 4, CornerRadiusBottomRight = 4,
+            BorderWidthTop = 2,
+            BorderWidthBottom = 2,
+            BorderWidthLeft = 2,
+            BorderWidthRight = 2,
+            CornerRadiusTopLeft = 4,
+            CornerRadiusTopRight = 4,
+            CornerRadiusBottomLeft = 4,
+            CornerRadiusBottomRight = 4,
         });
         boxOuter.MouseFilter = MouseFilterEnum.Ignore;
         _box = boxOuter;
@@ -224,20 +262,56 @@ internal class TickboxRow : HBoxContainer
         GuiInput += HandleInput;
         MouseEntered += OnHover;
         MouseExited += OnUnhover;
+
+        ApplyVisualState();
+    }
+
+    public void SetValueSilently(bool value)
+    {
+        _ticked = value;
+        ApplyVisualState();
+    }
+
+    public void SetEnabled(bool enabled)
+    {
+        _enabled = enabled;
+        MouseFilter = enabled ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore;
+        if (!enabled)
+        {
+            _tween?.Kill();
+            _box.Scale = _baseScale;
+        }
+        ApplyVisualState();
+    }
+
+    private void ApplyVisualState()
+    {
+        _checkMark.Visible = _ticked;
+
+        var boxStyle = (StyleBoxFlat)_box.GetThemeStylebox("panel");
+        if (_enabled)
+        {
+            boxStyle.BorderColor = _ticked ? StsColors.gold : new Color(0.4f, 0.35f, 0.25f, 0.8f);
+            _checkMark.Modulate = Colors.White;
+            _label.AddThemeColorOverride("font_color", _ticked ? StsColors.cream : new Color(0.65f, 0.60f, 0.50f));
+        }
+        else
+        {
+            boxStyle.BorderColor = new Color(0.28f, 0.24f, 0.20f, 0.6f);
+            _checkMark.Modulate = new Color(1f, 1f, 1f, 0.55f);
+            _label.AddThemeColorOverride("font_color", new Color(0.47f, 0.45f, 0.42f, 0.95f));
+        }
     }
 
     private void HandleInput(InputEvent e)
     {
+        if (!_enabled)
+            return;
+
         if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
         {
             _ticked = !_ticked;
-            _checkMark.Visible = _ticked;
-
-            // Update colors
-            var boxStyle = (StyleBoxFlat)_box.GetThemeStylebox("panel");
-            boxStyle.BorderColor = _ticked ? StsColors.gold : new Color(0.4f, 0.35f, 0.25f, 0.8f);
-
-            _label.AddThemeColorOverride("font_color", _ticked ? StsColors.cream : new Color(0.65f, 0.60f, 0.50f));
+            ApplyVisualState();
 
             // SFX
             SfxCmd.Play(_ticked ? "event:/sfx/ui/clicks/ui_checkbox_on" : "event:/sfx/ui/clicks/ui_checkbox_off");
@@ -256,6 +330,9 @@ internal class TickboxRow : HBoxContainer
 
     private void OnHover()
     {
+        if (!_enabled)
+            return;
+
         _tween?.Kill();
         _tween = CreateTween();
         _tween.TweenProperty(_box, "scale", _baseScale * 1.08f, 0.08)
@@ -264,6 +341,9 @@ internal class TickboxRow : HBoxContainer
 
     private void OnUnhover()
     {
+        if (!_enabled)
+            return;
+
         _tween?.Kill();
         _tween = CreateTween();
         _tween.TweenProperty(_box, "scale", _baseScale, 0.3)
