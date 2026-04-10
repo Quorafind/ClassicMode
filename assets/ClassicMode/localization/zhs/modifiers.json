@@ -1,0 +1,10 @@
+{
+    "CLASSIC_CUSTOM_CARDS.title": "经典卡牌",
+    "CLASSIC_CUSTOM_CARDS.description": "当前角色使用《杀戮尖塔》一代卡池。",
+    "CLASSIC_CUSTOM_RELICS.title": "经典遗物",
+    "CLASSIC_CUSTOM_RELICS.description": "当前角色使用《杀戮尖塔》一代遗物池。",
+    "CLASSIC_CUSTOM_HYBRID.title": "混合模式",
+    "CLASSIC_CUSTOM_HYBRID.description": "合并一代与二代卡牌/遗物池。与经典卡牌互斥。",
+    "CLASSIC_CUSTOM_HYBRID_DEDUPE.title": "同名去重（留二代）",
+    "CLASSIC_CUSTOM_HYBRID_DEDUPE.description": "仅在混合模式下生效：同名内容只保留二代版本。"
+}

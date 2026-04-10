@@ -278,14 +278,14 @@ public sealed class MachineLearningPower_C : PowerModel
 
 /// <summary>
 /// STS1 Self Repair: At end of combat, heal Amount HP.
-/// Uses the victory-only hook so it does not trigger on non-victory combat exits.
+/// Use AfterCombatEnd timing so the power is still present when hooks fire.
 /// </summary>
 public sealed class SelfRepairPower_C : PowerModel
 {
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override async Task AfterCombatVictory(CombatRoom room)
+    public override async Task AfterCombatEnd(CombatRoom room)
     {
         if (base.Owner.Player != null && !base.Owner.IsDead)
         {
@@ -335,33 +335,6 @@ public sealed class HeatsinksPower_C : PowerModel
         {
             Flash();
             await CardPileCmd.Draw(choiceContext, base.Amount, base.Owner.Player);
-        }
-    }
-}
-
-/// <summary>
-/// STS1 Rebound: The next card you play this turn goes on top of your draw pile instead of discard.
-/// </summary>
-public sealed class ReboundPower_C : PowerModel
-{
-    public override PowerType Type => PowerType.Buff;
-    public override PowerStackType StackType => PowerStackType.Counter;
-
-    public override async Task AfterCardPlayed(PlayerChoiceContext context, CardPlay cardPlay)
-    {
-        if (cardPlay.Card.Owner.Creature != base.Owner) return;
-        if (cardPlay.Card.Pile?.Type != PileType.Discard) return;
-
-        Flash();
-        await CardPileCmd.Add(cardPlay.Card, PileType.Draw, CardPilePosition.Top);
-        await PowerCmd.Remove(this);
-    }
-
-    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
-    {
-        if (side == base.Owner.Side)
-        {
-            await PowerCmd.Remove(this);
         }
     }
 }

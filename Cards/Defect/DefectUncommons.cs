@@ -15,6 +15,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Orbs;
 using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Saves.Runs;
 using MegaCrit.Sts2.Core.ValueProps;
 
@@ -313,7 +314,7 @@ public sealed class Rebound_C : ClassicDefectCard
         [new DamageVar(9m, ValueProp.Move)];
 
     public Rebound_C()
-        : base("rebound", 1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+        : base("rebound", 1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
     {
     }
 
@@ -323,7 +324,7 @@ public sealed class Rebound_C : ClassicDefectCard
         await DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
             .WithHitFx("vfx/vfx_attack_slash")
             .Execute(choiceContext);
-        await PowerCmd.Apply<ReboundPower_C>(Owner.Creature, 1m, Owner.Creature, this);
+        await PowerCmd.Apply<ReboundPower>(Owner.Creature, 1m, Owner.Creature, this);
     }
 
     protected override void OnUpgrade()
@@ -609,16 +610,13 @@ public sealed class Equilibrium_C : ClassicDefectCard
     }
 }
 
-// STS1 Fission: 0 energy, evoke all Orbs without triggering evoke. Gain 1 energy (2 upgraded) and draw 1 card (2 upgraded) per Orb. Exhaust.
+// STS1 Fission: 0 energy, remove all Orbs. Gain 1 energy and draw 1 card per Orb removed. Exhaust.
 public sealed class Fission_C : ClassicDefectCard
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
 
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-        [HoverTipFactory.Static(StaticHoverTip.Evoke)];
-
     public Fission_C()
-        : base("fission", 0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+        : base("fission", 0, CardType.Skill, CardRarity.Rare, TargetType.Self)
     {
     }
 
@@ -630,20 +628,15 @@ public sealed class Fission_C : ClassicDefectCard
             return;
 
         int orbCount = orbQueue.Orbs.Count;
-        if (IsUpgraded)
+        var orbManager = NCombatRoom.Instance?.GetCreatureNode(Owner.Creature)?.OrbManager;
+        foreach (OrbModel orb in orbQueue.Orbs.ToList())
         {
-            for (int i = 0; i < orbCount; i++)
-            {
-                await OrbCmd.EvokeNext(choiceContext, Owner);
-            }
-        }
-        else
-        {
-            foreach (OrbModel orb in orbQueue.Orbs.ToList())
-            {
-                orbQueue.Remove(orb);
-                orb.RemoveInternal();
-            }
+            if (!orbQueue.Remove(orb))
+                continue;
+
+            // Visual-only removal; does not call orb.Evoke() and thus does not trigger orb effects.
+            orbManager?.EvokeOrbAnim(orb);
+            orb.RemoveInternal();
         }
 
         await PlayerCmd.GainEnergy(orbCount, Owner);
@@ -830,7 +823,7 @@ public sealed class Hologram_C : ClassicDefectCard
         [new BlockVar(3m, ValueProp.Move)];
 
     public Hologram_C()
-        : base("hologram", 1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+        : base("hologram", 1, CardType.Skill, CardRarity.Common, TargetType.Self)
     {
     }
 
@@ -905,7 +898,7 @@ public sealed class Rainbow_C : ClassicDefectCard
     ];
 
     public Rainbow_C()
-        : base("rainbow", 2, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+        : base("rainbow", 2, CardType.Skill, CardRarity.Rare, TargetType.Self)
     {
     }
 
@@ -1002,7 +995,7 @@ public sealed class Seek_C : ClassicDefectCard
         [new CardsVar(1)];
 
     public Seek_C()
-        : base("seek", 0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+        : base("seek", 0, CardType.Skill, CardRarity.Rare, TargetType.Self)
     {
     }
 
@@ -1046,7 +1039,7 @@ public sealed class Stack_C : ClassicDefectCard
     ];
 
     public Stack_C()
-        : base("stack", 1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+        : base("stack", 1, CardType.Skill, CardRarity.Common, TargetType.Self)
     {
     }
 
@@ -1139,7 +1132,7 @@ public sealed class Buffer_C : ClassicDefectCard
         [new PowerVar<BufferPower>(1m)];
 
     public Buffer_C()
-        : base("buffer", 2, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+        : base("buffer", 2, CardType.Power, CardRarity.Rare, TargetType.Self)
     {
     }
 
