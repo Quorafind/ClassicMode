@@ -335,7 +335,7 @@ public sealed class GlassKnife_C : ClassicSilentCard
         [new DamageVar(8m, ValueProp.Move)];
 
     public GlassKnife_C()
-        : base("glass_knife", 1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+        : base("glass_knife", 1, CardType.Attack, CardRarity.Rare, TargetType.AnyEnemy)
     {
     }
 
@@ -715,12 +715,10 @@ public sealed class Concentrate_C : ClassicSilentCard
 // ────────────────────────────────────────────────────────────────────────────
 // 20. CorpseExplosion (no STS2 collision)
 //     2 cost, Skill, AnyEnemy. Apply Poison equal to 6 (9 upg).
-//     When that enemy dies, deal damage to all enemies equal to its Max HP. Exhaust.
+//     When that enemy dies, deal damage to all enemies equal to its Max HP.
 // ────────────────────────────────────────────────────────────────────────────
 public sealed class CorpseExplosion_C : ClassicSilentCard
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
-
     protected override IEnumerable<IHoverTip> ExtraHoverTips =>
         [HoverTipFactory.FromPower<PoisonPower>()];
 
@@ -728,7 +726,7 @@ public sealed class CorpseExplosion_C : ClassicSilentCard
         [new PowerVar<PoisonPower>(6m)];
 
     public CorpseExplosion_C()
-        : base("corpse_explosion", 2, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy)
+        : base("corpse_explosion", 2, CardType.Skill, CardRarity.Rare, TargetType.AnyEnemy)
     {
     }
 
@@ -932,7 +930,7 @@ public sealed class PiercingWail_C : ClassicSilentCard
         [new DynamicVar("StrLoss", 6m)];
 
     public PiercingWail_C()
-        : base("piercing_wail", 1, CardType.Skill, CardRarity.Uncommon, TargetType.AllEnemies)
+        : base("piercing_wail", 1, CardType.Skill, CardRarity.Common, TargetType.AllEnemies)
     {
     }
 
@@ -953,14 +951,12 @@ public sealed class PiercingWail_C : ClassicSilentCard
 
 // ────────────────────────────────────────────────────────────────────────────
 // 27. PhantasmalKiller (no STS2 collision)
-//     1 cost, Skill, Self. Next turn, your attacks deal double damage. Ethereal.
+//     1 cost, Skill, Self. Next turn, your attacks deal double damage.
 // ────────────────────────────────────────────────────────────────────────────
 public sealed class PhantasmalKiller_C : ClassicSilentCard
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Ethereal];
-
     public PhantasmalKiller_C()
-        : base("phantasmal_killer", 1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+        : base("phantasmal_killer", 1, CardType.Skill, CardRarity.Rare, TargetType.Self)
     {
     }
 
@@ -1181,7 +1177,7 @@ public sealed class Envenom_C : ClassicSilentCard
         [new PowerVar<EnvenomPower>(1m)];
 
     public Envenom_C()
-        : base("envenom", 2, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+        : base("envenom", 2, CardType.Power, CardRarity.Rare, TargetType.Self)
     {
     }
 

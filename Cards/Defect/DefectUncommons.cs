@@ -314,7 +314,7 @@ public sealed class Rebound_C : ClassicDefectCard
         [new DamageVar(9m, ValueProp.Move)];
 
     public Rebound_C()
-        : base("rebound", 1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+        : base("rebound", 1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
     {
     }
 
@@ -616,7 +616,7 @@ public sealed class Fission_C : ClassicDefectCard
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
 
     public Fission_C()
-        : base("fission", 0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+        : base("fission", 0, CardType.Skill, CardRarity.Rare, TargetType.Self)
     {
     }
 
@@ -823,7 +823,7 @@ public sealed class Hologram_C : ClassicDefectCard
         [new BlockVar(3m, ValueProp.Move)];
 
     public Hologram_C()
-        : base("hologram", 1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+        : base("hologram", 1, CardType.Skill, CardRarity.Common, TargetType.Self)
     {
     }
 
@@ -898,7 +898,7 @@ public sealed class Rainbow_C : ClassicDefectCard
     ];
 
     public Rainbow_C()
-        : base("rainbow", 2, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+        : base("rainbow", 2, CardType.Skill, CardRarity.Rare, TargetType.Self)
     {
     }
 
@@ -995,7 +995,7 @@ public sealed class Seek_C : ClassicDefectCard
         [new CardsVar(1)];
 
     public Seek_C()
-        : base("seek", 0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+        : base("seek", 0, CardType.Skill, CardRarity.Rare, TargetType.Self)
     {
     }
 
@@ -1039,7 +1039,7 @@ public sealed class Stack_C : ClassicDefectCard
     ];
 
     public Stack_C()
-        : base("stack", 1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+        : base("stack", 1, CardType.Skill, CardRarity.Common, TargetType.Self)
     {
     }
 
@@ -1132,7 +1132,7 @@ public sealed class Buffer_C : ClassicDefectCard
         [new PowerVar<BufferPower>(1m)];
 
     public Buffer_C()
-        : base("buffer", 2, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+        : base("buffer", 2, CardType.Power, CardRarity.Rare, TargetType.Self)
     {
     }
 

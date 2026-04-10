@@ -137,7 +137,7 @@ public sealed class HeavyBlade_C : ClassicIroncladCard
     ];
 
     public HeavyBlade_C()
-        : base("heavy_blade", 2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+        : base("heavy_blade", 2, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
     {
     }
 
@@ -977,7 +977,7 @@ public sealed class Berserk_C : ClassicIroncladCard
     ];
 
     public Berserk_C()
-        : base("berserk", 0, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+        : base("berserk", 0, CardType.Power, CardRarity.Rare, TargetType.Self)
     {
     }
 
@@ -1116,7 +1116,7 @@ public sealed class Juggernaut_C : ClassicIroncladCard
         [new PowerVar<JuggernautPower>(5m)];
 
     public Juggernaut_C()
-        : base("juggernaut", 2, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+        : base("juggernaut", 2, CardType.Power, CardRarity.Rare, TargetType.Self)
     {
     }
 

@@ -202,7 +202,7 @@ public sealed class Whirlwind_C : ClassicIroncladCard
         [new DamageVar(5m, ValueProp.Move)];
 
     public Whirlwind_C()
-        : base("whirlwind", -1, CardType.Attack, CardRarity.Rare, TargetType.AllEnemies)
+        : base("whirlwind", -1, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies)
     {
     }
 

@@ -231,7 +231,7 @@ public sealed class DoubleEnergy_C : ClassicDefectCard
         [HoverTipFactory.Static(StaticHoverTip.Energy)];
 
     public DoubleEnergy_C()
-        : base("double_energy", 1, CardType.Skill, CardRarity.Rare, TargetType.Self)
+        : base("double_energy", 1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
     {
     }
 
@@ -285,7 +285,7 @@ public sealed class MultiCast_C : ClassicDefectCard
 public sealed class Recycle_C : ClassicDefectCard
 {
     public Recycle_C()
-        : base("recycle", 1, CardType.Skill, CardRarity.Rare, TargetType.Self)
+        : base("recycle", 1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
     {
     }
 
@@ -474,7 +474,7 @@ public sealed class SelfRepair_C : ClassicDefectCard
         [new DynamicVar("Heal", 7m)];
 
     public SelfRepair_C()
-        : base("self_repair", 1, CardType.Power, CardRarity.Rare, TargetType.Self)
+        : base("self_repair", 1, CardType.Power, CardRarity.Uncommon, TargetType.Self)
     {
     }
 

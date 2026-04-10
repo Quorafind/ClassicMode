@@ -415,7 +415,7 @@ public sealed class Reboot_C : ClassicDefectCard
         [new CardsVar(4)];
 
     public Reboot_C()
-        : base("reboot", 0, CardType.Skill, CardRarity.Common, TargetType.Self)
+        : base("reboot", 0, CardType.Skill, CardRarity.Rare, TargetType.Self)
     {
     }
 
@@ -486,7 +486,7 @@ public sealed class Skim_C : ClassicDefectCard
         [new CardsVar(3)];
 
     public Skim_C()
-        : base("skim", 1, CardType.Skill, CardRarity.Common, TargetType.Self)
+        : base("skim", 1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
     {
     }
 
