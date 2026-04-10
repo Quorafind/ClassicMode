@@ -509,10 +509,6 @@ _CUSTOM_CARD_LOC = {
             "NAME": "Burn+",
             "DESCRIPTION": "At the end of your turn, if this is in your [gold]Hand[/gold], take {Damage:diff()} damage."
         },
-        "Malaise_C": {
-            "NAME": "Malaise",
-            "DESCRIPTION": "Enemy loses X Strength this turn. Apply X Weak.\nExhaust."
-        },
         "FanOfKnives_C": {
             "NAME": "Fan of Knives",
             "DESCRIPTION": "Deal {Damage:diff()} damage to ALL enemies.\nDraw {Cards:diff()} card."
@@ -523,16 +519,125 @@ _CUSTOM_CARD_LOC = {
             "NAME": "灼伤+",
             "DESCRIPTION": "在你的回合结束时，如果这张牌在你的[gold]手牌[/gold]中，你受到{Damage:diff()}点伤害。"
         },
-        "Malaise_C": {
-            "NAME": "萎靡",
-            "DESCRIPTION": "敌人失去X点 力量 1回合，给予X层 虚弱 。\n消耗 。"
-        },
         "FanOfKnives_C": {
             "NAME": "万刃齐发",
             "DESCRIPTION": "对所有敌人造成{Damage:diff()}点伤害。\n抽{Cards:diff()}张牌。"
         },
     },
 }
+
+# Extra non-card-model keys that must survive every localization regeneration.
+_EXTRA_CARD_LOC = {
+    "eng": {
+        "CLASSIC_ORIGIN_HOVERTIP.title": "Classic Card",
+        "CLASSIC_ORIGIN_HOVERTIP.description": "This card comes from Slay the Spire 1.",
+    },
+    "zhs": {
+        "CLASSIC_ORIGIN_HOVERTIP.title": "一代卡牌",
+        "CLASSIC_ORIGIN_HOVERTIP.description": "这张卡来自《杀戮尖塔》一代。",
+    },
+}
+
+# zh terminology that should be highlighted, and synced to the paired EN text.
+_TERM_HIGHLIGHT_MAP = [
+    ("\u6613\u4f24", "Vulnerable"),
+    ("\u865a\u5f31", "Weak"),
+    ("\u4e2d\u6bd2", "Poison"),
+    ("\u683c\u6321", "Block"),
+    ("\u529b\u91cf", "Strength"),
+    ("\u654f\u6377", "Dexterity"),
+    ("\u96c6\u4e2d", "Focus"),
+    ("\u4eba\u5de5\u5236\u54c1", "Artifact"),
+    ("\u5145\u80fd\u7403", "Orb"),
+    ("\u6d88\u8017", "Exhaust"),
+    ("\u56fa\u6709", "Innate"),
+    ("\u865a\u65e0", "Ethereal"),
+]
+
+_CJK = r"\u4e00-\u9fff"
+
+
+def _normalize_zh_description(text: str):
+    """Remove unnecessary zh spaces and add [gold] highlight for key terms."""
+    v = text or ""
+    changed_terms = set()
+
+    # Case 1: remove spaces around numbers/placeholders and CJK units.
+    v = re.sub(rf"(?<=[{_CJK}])[ \t]+(?=[0-9{{])", "", v)
+    v = re.sub(rf"(?<=[0-9}}])[ \t]+(?=[{_CJK}])", "", v)
+
+    # Generic whitespace cleanup in Chinese sentence flow.
+    # Do not consume newlines here: only trim spaces/tabs around zh flow.
+    v = re.sub(rf"(?<=\[/gold\])[ \t]+(?=[{_CJK}])", "", v)
+    v = re.sub(rf"(?<=[{_CJK}\]）\)])[ \t]+(?=[{_CJK}\[（\(])", "", v)
+    v = re.sub(rf"([，。！？；：、])[ \t]+(?=[{_CJK}\[])", r"\1", v)
+
+    # General zh punctuation spacing cleanup.
+    v = re.sub(r"[ \t]+([，。！？；：、）\)])", r"\1", v)
+    v = re.sub(r"([（\(])[ \t]+", r"\1", v)
+
+    # Case 2: add gold highlight for key terms.
+    # We intentionally do not require whitespace boundaries so phrases like
+    # "格挡不再..." still highlight "格挡".
+    for zh_term, _ in _TERM_HIGHLIGHT_MAP:
+        # Allow accidental internal whitespace inside terms (e.g. "敏 捷").
+        escaped = r"[ \t]*".join(re.escape(ch) for ch in zh_term)
+        # First normalize existing highlighted variants with internal spaces.
+        v = re.sub(rf"\[gold\]\s*{escaped}\s*\[/gold\]", f"[gold]{zh_term}[/gold]", v)
+        pattern = re.compile(rf"(?<!\[gold\])({escaped})(?!\[/gold\])")
+        replaced = pattern.sub(rf"[gold]\1[/gold]", v)
+        # Normalize any spaces that were matched inside the highlighted term.
+        replaced = re.sub(rf"\[gold\]{escaped}\[/gold\]", f"[gold]{zh_term}[/gold]", replaced)
+        if replaced != v:
+            changed_terms.add(zh_term)
+            v = replaced
+
+    # Final pass: collapse accidental double spaces.
+    v = re.sub(r" {2,}", " ", v)
+    return v, changed_terms
+
+
+def _sync_english_highlight(text: str, english_term: str):
+    escaped = re.escape(english_term)
+    pattern = re.compile(rf"(?<!\[gold\])(?<!\{{)\b{escaped}\b(?!:)(?!\[/gold\])")
+    return pattern.sub(f"[gold]{english_term}[/gold]", text)
+
+
+def _apply_zh_spacing_and_highlight(zhs_cards: dict, eng_cards: dict):
+    """Apply zh spacing/highlight rules and sync matching EN term highlights."""
+    changed_desc_count = 0
+    changed_en_count = 0
+    all_changed_terms = set()
+
+    zh_to_en = {zh: en for zh, en in _TERM_HIGHLIGHT_MAP}
+
+    for key in list(zhs_cards.keys()):
+        if not (key.endswith(".description") or key.endswith(".upgradedDescription")):
+            continue
+
+        original = str(zhs_cards.get(key, ""))
+        fixed, changed_terms = _normalize_zh_description(original)
+
+        if fixed != original:
+            zhs_cards[key] = fixed
+            changed_desc_count += 1
+
+        if changed_terms and key in eng_cards:
+            en_text = str(eng_cards.get(key, ""))
+            en_fixed = en_text
+            for zh_term in changed_terms:
+                all_changed_terms.add(zh_term)
+                en_term = zh_to_en[zh_term]
+                en_fixed = _sync_english_highlight(en_fixed, en_term)
+
+            if en_fixed != en_text:
+                eng_cards[key] = en_fixed
+                changed_en_count += 1
+
+    terms_text = ", ".join(sorted(all_changed_terms)) if all_changed_terms else "(none)"
+    print(f"  zh spacing/highlight changes: {changed_desc_count}")
+    print(f"  en highlight sync changes: {changed_en_count}")
+    print(f"  terms highlighted: {terms_text}")
 
 # Cards whose CanonicalVars declare `RepeatVar` rather than a MagicNumber
 # DynamicVar. The STS1 converter emits `{MagicNumber:diff()}` for `!M!`, but
@@ -699,12 +804,12 @@ def _convert_card_desc(desc):
 
     # Chinese context patterns for !M!
     zhs_magic = [
-        ('!M!(\\s*)(?:层\\s*)?易伤', '{VulnerablePower:diff()}\\1易伤'),
-        ('!M!(\\s*)(?:层\\s*)?虚弱', '{WeakPower:diff()}\\1虚弱'),
-        ('!M!(\\s*)(?:层\\s*)?中毒', '{PoisonPower:diff()}\\1中毒'),
-        ('!M!(\\s*)(?:点\\s*)?力量', '{StrengthPower:diff()}\\1力量'),
-        ('!M!(\\s*)(?:点\\s*)?敏捷', '{DexterityPower:diff()}\\1敏捷'),
-        ('!M!(\\s*)(?:点\\s*)?集中', '{FocusPower:diff()}\\1集中'),
+        ('!M!(\\s*)((?:层\\s*)?)易伤', '{VulnerablePower:diff()}\\1\\2易伤'),
+        ('!M!(\\s*)((?:层\\s*)?)虚弱', '{WeakPower:diff()}\\1\\2虚弱'),
+        ('!M!(\\s*)((?:层\\s*)?)中毒', '{PoisonPower:diff()}\\1\\2中毒'),
+        ('!M!(\\s*)((?:点\\s*)?)力量', '{StrengthPower:diff()}\\1\\2力量'),
+        ('!M!(\\s*)((?:点\\s*)?)敏捷', '{DexterityPower:diff()}\\1\\2敏捷'),
+        ('!M!(\\s*)((?:点\\s*)?)集中', '{FocusPower:diff()}\\1\\2集中'),
         ('!M!(\\s*)(?:层\\s*)?荆棘', '{ThornsPower:diff()}\\1荆棘'),
         ('!M!(\\s*)张牌', '{Cards:diff()}\\1张牌'),
     ]
@@ -721,6 +826,14 @@ def _convert_card_desc(desc):
     for icon in ('[R]', '[G]', '[B]', '[E]', '[W]'):
         desc = desc.replace(icon, '{energyPrefix:energyIcons(1)}')
 
+    # Collapse repeated energy placeholders into a single count-based placeholder.
+    # Example: "{...1} {...1} {...1}" -> "{energyPrefix:energyIcons(3)}".
+    def _collapse_energy(match):
+        count = len(re.findall(r'\{energyPrefix:energyIcons\(1\)\}', match.group(0)))
+        return f'{{energyPrefix:energyIcons({count})}}'
+
+    desc = re.sub(r'(?:\{energyPrefix:energyIcons\(1\)\}\s*){2,}', _collapse_energy, desc)
+
     # Remove STS1 formatting codes (#b = bold, #y = yellow/keyword, #r = red)
     desc = re.sub(r'#[byrgp]', '', desc)
 
@@ -734,6 +847,168 @@ def _convert_card_desc(desc):
     desc = re.sub(r' +', ' ', desc).strip()
 
     return desc
+
+
+def _strip_auto_keyword_sentences(desc: str) -> str:
+    """Remove standalone auto-rendered keyword sentences from STS1 descriptions."""
+    if not desc:
+        return ""
+
+    def _normalize_chunk(chunk: str) -> str:
+        s = chunk.strip()
+        s = re.sub(r'\[/?gold\]', '', s, flags=re.IGNORECASE)
+        s = s.replace('。', '.').replace('！', '!').replace('？', '?')
+        s = re.sub(r'\s+', '', s).lower()
+        s = s.rstrip('.!?')
+        return s
+
+    blocked = {"innate", "exhaust", "ethereal", "固有", "消耗", "虚无"}
+
+    # Remove standalone keyword sentences that appear after another sentence on the same line,
+    # e.g. "... Max HP by X. [gold]Exhaust[/gold]."
+    keyword_group = r'innate|exhaust|ethereal|固有|消耗|虚无'
+    trailing_keyword_sentence = re.compile(
+        rf'(?<=[。.!?])\s*\[gold\]?\s*(?:{keyword_group})\s*(?:\[/gold\])?\s*[。.!?]',
+        flags=re.IGNORECASE,
+    )
+    desc = trailing_keyword_sentence.sub('', desc)
+
+    kept = []
+    for line in desc.split('\n'):
+        chunks = re.findall(r'[^。.!?]+[。.!?]?', line)
+        filtered = [chunk for chunk in chunks if _normalize_chunk(chunk) not in blocked]
+        merged = ''.join(filtered).strip()
+        if merged:
+            kept.append(merged)
+    return '\n'.join(kept).strip()
+
+
+def _normalize_zhs_x_spacing(desc: str) -> str:
+    """Remove spaces around standalone X tokens in Chinese card text."""
+    if not desc:
+        return ""
+    return re.sub(r'(?<![A-Za-z0-9])\s*X\s*(?![A-Za-z0-9])', 'X', desc)
+
+
+def _inject_x_plus_one_if_upgraded(desc: str) -> str:
+    """Render X as X+1 when upgraded using STS2's IfUpgraded formatter."""
+    if not desc:
+        return ""
+    return re.sub(r'(?<![A-Za-z0-9])X(?![A-Za-z0-9])', 'X{IfUpgraded:show:+1|}', desc)
+
+
+def _apply_card_specific_desc_fixes(cls_name: str, lang: str, desc: str) -> str:
+    """Fix known placeholder mismatches between STS1 text and ClassicMode DynamicVars."""
+    def repl_var(old: str, new: str) -> None:
+        nonlocal desc
+        desc = desc.replace(f"{{{old}:diff()}}", f"{{{new}:diff()}}")
+        desc = desc.replace(f"{{{old}}}", f"{{{new}}}")
+
+    def repl_literal(var_name: str, literal: str) -> None:
+        nonlocal desc
+        desc = desc.replace(f"{{{var_name}:diff()}}", literal)
+        desc = desc.replace(f"{{{var_name}}}", literal)
+
+    # Flex / Demon Form use DynamicVar("Strength"), not PowerVar<StrengthPower>.
+    if cls_name in {"Flex_C", "DemonForm_C"}:
+        repl_var("StrengthPower", "Strength")
+
+    # Perfected Strike uses CalculatedDamage for final hit and ExtraDamage for per-Strike scaling.
+    if cls_name == "PerfectedStrike_C":
+        repl_var("Damage", "CalculatedDamage")
+        repl_var("MagicNumber", "ExtraDamage")
+        if "{ExtraDamage:diff()}" not in desc:
+            if lang == "zhs":
+                desc = re.sub(r"伤害\+\d+", "伤害+{ExtraDamage:diff()}", desc)
+            else:
+                desc = re.sub(
+                    r"Deals?\s+\d+\s+additional\s+damage",
+                    "Deals {ExtraDamage:diff()} additional damage",
+                    desc,
+                    flags=re.IGNORECASE,
+                )
+
+    # Blizzard uses ExtraDamage as per-Frost multiplier (not MagicNumber).
+    if cls_name == "Blizzard_C":
+        repl_var("MagicNumber", "ExtraDamage")
+
+    # Noxious Fumes uses DynamicVar("PoisonPerTurn").
+    if cls_name == "NoxiousFumes_C":
+        repl_var("PoisonPower", "PoisonPerTurn")
+
+    # Piercing Wail uses DynamicVar("StrLoss").
+    if cls_name == "PiercingWail_C":
+        repl_var("StrengthPower", "StrLoss")
+
+    # Uppercut / Shockwave use shared DynamicVar("Power") for Weak and Vulnerable amounts.
+    if cls_name in {"Uppercut_C", "Shockwave_C"}:
+        repl_var("WeakPower", "Power")
+        repl_var("VulnerablePower", "Power")
+
+    # Strict placeholder alignment with card CanonicalVars (systematic fixes).
+    rename_by_card = {
+        "AThousandCuts_C": {"MagicNumber": "CutDamage"},
+        "Accuracy_C": {"MagicNumber": "AccuracyPower"},
+        "Aggregate_C": {"Cards": "Divisor"},
+        "BladeDance_C": {"MagicNumber": "Cards"},
+        "Caltrops_C": {"MagicNumber": "ThornsPower"},
+        "ChokeHold_C": {"MagicNumber": "Choke"},
+        "Claw_C": {"MagicNumber": "Increase"},
+        "CloakAndDagger_C": {"MagicNumber": "Cards"},
+        "Concentrate_C": {"Cards": "Discard"},
+        "CoreSurge_C": {"MagicNumber": "ArtifactPower"},
+        "Expertise_C": {"Cards": "HandSize", "MagicNumber": "HandSize"},
+        "Feed_C": {"MagicNumber": "MaxHp"},
+        "FeelNoPain_C": {"MagicNumber": "Power", "Block": "Power"},
+        "FlameBarrier_C": {"MagicNumber": "DamageBack"},
+        "Ftl_C": {"MagicNumber": "PlayMax", "Cards": "PlayMax"},
+            "Metallicize_C": {"Block": "MagicNumber"},
+        "GeneticAlgorithm_C": {"MagicNumber": "Increase"},
+        "Heatsinks_C": {"Cards": "Heatsinks"},
+        "HeavyBlade_C": {"MagicNumber": "StrengthMultiplier"},
+        "Hemokinesis_C": {"MagicNumber": "HpLoss"},
+        "Juggernaut_C": {"MagicNumber": "JuggernautPower"},
+        "Lockdown_C": {"MagicNumber": "LockOnPower_C"},
+        "Offering_C": {"Cards": "Draw"},
+        "Rage_C": {"MagicNumber": "RagePower", "Block": "RagePower"},
+        "Rampage_C": {"MagicNumber": "Increase"},
+        "SelfRepair_C": {"MagicNumber": "Heal"},
+        "StaticDischarge_C": {"MagicNumber": "StaticDischarge"},
+        "WellLaidPlans_C": {"Cards": "RetainAmount"},
+        "WraithForm_C": {"MagicNumber": "IntangiblePower"},
+    }
+    for old_name, new_name in rename_by_card.get(cls_name, {}).items():
+        repl_var(old_name, new_name)
+
+    # Fixed-value cards that do not define matching DynamicVars for these text slots.
+    literal_by_card = {
+        "BallLightning_C": {"MagicNumber": "1"},
+        "Chill_C": {"MagicNumber": "1"},
+        "ColdSnap_C": {"MagicNumber": "1"},
+        "CompiledDriver_C": {"Cards": "1"},
+        "Darkness_C": {"MagicNumber": "1"},
+        "DoomAndGloom_C": {"MagicNumber": "1"},
+        "Fission_C": {"Cards": "1"},
+        "Fusion_C": {"MagicNumber": "1"},
+        "Glacier_C": {"MagicNumber": "2"},
+        "MeteorStrike_C": {"MagicNumber": "3"},
+        "Nightmare_C": {"MagicNumber": "3"},
+        "RipAndTear_C": {"MagicNumber": "2"},
+        "Streamline_C": {"MagicNumber": "1"},
+        "Zap_C": {"MagicNumber": "1"},
+    }
+    for old_name, literal in literal_by_card.get(cls_name, {}).items():
+        repl_literal(old_name, literal)
+
+    return desc
+
+
+_X_PLUS_ONE_UPGRADE_DESC_CARDS = {
+    "Tempest_C",
+    "Malaise_C",
+    "Doppelganger_C",
+    "MultiCast_C",
+}
 
 
 def _find_card_classes(project_dir):
@@ -790,6 +1065,9 @@ def generate_localization(sts1_root, project_dir):
         shutil.rmtree(old_loc_dir)
         print("  Removed old assets/localization/ (was overriding base game)")
 
+    card_loc_by_lang = {}
+    out_dir_by_lang = {}
+
     for lang in langs:
         cards_src = os.path.join(sts1_root, "localization", lang, "cards.json")
 
@@ -840,6 +1118,12 @@ def generate_localization(sts1_root, project_dir):
                     if cls_name in _REPEAT_VAR_CARDS:
                         desc = desc.replace("{MagicNumber:", "{Repeat:")
                         desc = desc.replace("{MagicNumber}", "{Repeat}")
+                    desc = _apply_card_specific_desc_fixes(cls_name, lang, desc)
+                    desc = _strip_auto_keyword_sentences(desc)
+                    if cls_name in _X_PLUS_ONE_UPGRADE_DESC_CARDS:
+                        desc = _inject_x_plus_one_if_upgraded(desc)
+                    if lang == "zhs":
+                        desc = _normalize_zhs_x_spacing(desc)
                     card_loc[f"{model_key}.description"] = desc
                     card_loc[f"{model_key}.selectionScreenPrompt"] = default_prompt
                 else:
@@ -861,9 +1145,11 @@ def generate_localization(sts1_root, project_dir):
                 slug = _slugify(class_name)
                 card_loc[f"{slug}.selectionScreenPrompt"] = prompt
 
-            with open(os.path.join(out_dir, "cards.json"), 'w', encoding='utf-8') as f:
-                json.dump(card_loc, f, ensure_ascii=False, indent=2)
-            print(f"  Generated {lang}/cards.json: {len(card_loc) // 2} entries")
+            # Keep non-card-model custom keys that are consumed by runtime patches.
+            card_loc.update(_EXTRA_CARD_LOC.get(lang, {}))
+
+            card_loc_by_lang[lang] = card_loc
+            out_dir_by_lang[lang] = out_dir
 
         # --- Relics ---
         relic_classes = _find_relic_classes(project_dir)
@@ -889,6 +1175,19 @@ def generate_localization(sts1_root, project_dir):
             with open(os.path.join(out_dir, "powers.json"), 'w', encoding='utf-8') as f:
                 json.dump(power_loc, f, ensure_ascii=False, indent=2)
             print(f"  Generated {lang}/powers.json: {len(power_src)} entries")
+
+    # Run zh cleanup/highlight rules after both language card dictionaries are built.
+    if "eng" in card_loc_by_lang and "zhs" in card_loc_by_lang:
+        _apply_zh_spacing_and_highlight(card_loc_by_lang["zhs"], card_loc_by_lang["eng"])
+
+    # Write cards.json for each language.
+    for lang in langs:
+        if lang not in card_loc_by_lang:
+            continue
+        out_dir = out_dir_by_lang[lang]
+        with open(os.path.join(out_dir, "cards.json"), 'w', encoding='utf-8') as f:
+            json.dump(card_loc_by_lang[lang], f, ensure_ascii=False, indent=2)
+        print(f"  Generated {lang}/cards.json: {len(card_loc_by_lang[lang]) // 2} entries")
 
 
 def main():

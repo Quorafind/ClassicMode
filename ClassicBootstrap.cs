@@ -18,6 +18,7 @@ public static class ClassicBootstrap
         _initialized = true;
 
         ClassicConfig.Load();
+        ClassicModConfigBridge.DeferredRegister();
 
         var harmony = new Harmony("boninall.classicmode");
         int applied = 0, failed = 0;

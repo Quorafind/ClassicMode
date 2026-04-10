@@ -14,6 +14,7 @@ public static class ClassicConfig
     private static bool _classicRelics;
     private static bool _classicHybrid;
     private static bool _hybridDedupe;
+    private static bool _markClassicCardOrigin;
 
     // Every pool-affecting toggle invalidates ModelDb's lazy `_allCards` /
     // `_allCardPools` / `_allCharacterCardPools` / relic equivalents on
@@ -75,6 +76,21 @@ public static class ClassicConfig
         }
     }
 
+    /// <summary>
+    /// When true, classic (STS1) cards show an origin hover tip to make
+    /// them visually distinguishable in mixed pools.
+    /// </summary>
+    public static bool MarkClassicCardOrigin
+    {
+        get => _markClassicCardOrigin;
+        set
+        {
+            if (_markClassicCardOrigin == value) return;
+            _markClassicCardOrigin = value;
+            Save();
+        }
+    }
+
     public static void Load()
     {
         try
@@ -89,8 +105,9 @@ public static class ClassicConfig
                     _classicRelics = data.ClassicRelics;
                     _classicHybrid = data.ClassicHybrid;
                     _hybridDedupe = data.HybridDedupe;
+                    _markClassicCardOrigin = data.MarkClassicCardOrigin;
                 }
-                Log.Info($"[ClassicMode] Config loaded: Cards={_classicCards}, Relics={_classicRelics}, Hybrid={_classicHybrid}, Dedupe={_hybridDedupe}");
+                Log.Info($"[ClassicMode] Config loaded: Cards={_classicCards}, Relics={_classicRelics}, Hybrid={_classicHybrid}, Dedupe={_hybridDedupe}, MarkSTS1={_markClassicCardOrigin}");
             }
         }
         catch (Exception ex)
@@ -108,7 +125,8 @@ public static class ClassicConfig
                 ClassicCards = _classicCards,
                 ClassicRelics = _classicRelics,
                 ClassicHybrid = _classicHybrid,
-                HybridDedupe = _hybridDedupe
+                HybridDedupe = _hybridDedupe,
+                MarkClassicCardOrigin = _markClassicCardOrigin
             };
             File.WriteAllText(ConfigPath, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
         }
@@ -124,5 +142,6 @@ public static class ClassicConfig
         public bool ClassicRelics { get; set; }
         public bool ClassicHybrid { get; set; }
         public bool HybridDedupe { get; set; }
+        public bool MarkClassicCardOrigin { get; set; }
     }
 }
