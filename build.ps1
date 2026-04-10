@@ -120,10 +120,22 @@ $pckPath        = Join-Path $outputDir "$modName.pck"
 
 Ensure-Dir $outputRoot
 Ensure-Dir $outputDir
-if (Test-Path $pckRoot) {
-  Remove-Item $pckRoot -Recurse -Force
+if ($SkipAssets) {
+  if (-not (Test-Path $pckRoot)) {
+    throw @"
+Cannot use -SkipAssets because no existing PCK source directory was found:
+  $pckRoot
+
+Run build.ps1 once without -SkipAssets to generate _pck_src, then use -SkipAssets for faster iteration.
+"@
+  }
+  Write-Host "Reusing existing PCK source: $pckRoot"
+} else {
+  if (Test-Path $pckRoot) {
+    Remove-Item $pckRoot -Recurse -Force
+  }
+  Ensure-Dir $pckRoot
 }
-Ensure-Dir $pckRoot
 
 # ---------------------------------------------------------------------------
 # Step 1: Build the DLL
@@ -162,5 +174,37 @@ Import-GodotTextures -PckRoot $pckRoot -ModName $modName
 # ---------------------------------------------------------------------------
 # Step 4: Pack PCK + ZIPs
 # ---------------------------------------------------------------------------
+# Validate staged PCK source before packing to avoid generating an empty/stub PCK.
+$pckSourceFiles = Get-ChildItem $pckRoot -Recurse -File
+$pckSourceCount = @($pckSourceFiles).Count
+$pckSourceBytes = ($pckSourceFiles | Measure-Object -Property Length -Sum).Sum
+if (-not $pckSourceBytes) { $pckSourceBytes = 0 }
+
+if ($pckSourceCount -lt 20 -or $pckSourceBytes -lt 5MB) {
+  throw @"
+PCK source looks incomplete and is likely to produce a bad package:
+  Root:  $pckRoot
+  Files: $pckSourceCount
+  Size:  $pckSourceBytes bytes
+
+Re-run build.ps1 without -SkipAssets to regenerate _pck_src from STS1 assets.
+"@
+}
+
 Build-ModPck   -PckRoot $pckRoot -PckPath $pckPath
+
+# Guard against accidentally packaging an empty/stub PCK (e.g. 608 bytes).
+if (-not (Test-Path $pckPath)) {
+  throw "PCK was not generated at: $pckPath"
+}
+$pckSize = (Get-Item $pckPath).Length
+if ($pckSize -lt 1MB) {
+  throw @"
+Generated PCK is suspiciously small ($pckSize bytes):
+  $pckPath
+
+This usually means assets were not packaged. Re-run without -SkipAssets and verify STS1_UNPACKED_DIR.
+"@
+}
+
 Package-ModZips -OutputDir $outputDir -ModName $modName -PckPath $pckPath -RepoRoot $outputRoot -ProjectDir $projectDir

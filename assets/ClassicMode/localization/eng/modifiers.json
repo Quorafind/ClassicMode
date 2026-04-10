@@ -1,10 +1,10 @@
 {
-  "CLASSIC_CUSTOM_CARDS.title": "Classic Cards",
-  "CLASSIC_CUSTOM_CARDS.description": "Use Slay the Spire 1 card pools for your selected character.",
-  "CLASSIC_CUSTOM_RELICS.title": "Classic Relics",
-  "CLASSIC_CUSTOM_RELICS.description": "Use Slay the Spire 1 relic pools for your selected character.",
-  "CLASSIC_CUSTOM_HYBRID.title": "Hybrid Mode",
-  "CLASSIC_CUSTOM_HYBRID.description": "Merge STS1 and STS2 card/relic pools. Mutually exclusive with Classic Cards.",
-  "CLASSIC_CUSTOM_HYBRID_DEDUPE.title": "Dedupe Overlaps",
-  "CLASSIC_CUSTOM_HYBRID_DEDUPE.description": "Hybrid only: remove same-name overlaps so STS2 versions win."
+    "CLASSIC_CUSTOM_CARDS.title": "Classic Cards",
+    "CLASSIC_CUSTOM_CARDS.description": "Use Slay the Spire 1 card pools for your selected character.",
+    "CLASSIC_CUSTOM_RELICS.title": "Classic Relics",
+    "CLASSIC_CUSTOM_RELICS.description": "Use Slay the Spire 1 relic pools for your selected character.",
+    "CLASSIC_CUSTOM_HYBRID.title": "Hybrid Mode",
+    "CLASSIC_CUSTOM_HYBRID.description": "Merge STS1 and STS2 card/relic pools. Mutually exclusive with Classic Cards.",
+    "CLASSIC_CUSTOM_HYBRID_DEDUPE.title": "Dedupe Overlaps",
+    "CLASSIC_CUSTOM_HYBRID_DEDUPE.description": "Hybrid only: remove same-name overlaps so STS2 versions win."
 }
