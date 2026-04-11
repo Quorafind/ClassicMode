@@ -1,8 +1,12 @@
+using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Logging;
+using MegaCrit.Sts2.Core.Multiplayer.Game;
+using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
@@ -11,7 +15,7 @@ namespace ClassicModeMod;
 
 /// <summary>
 /// Injects Classic Mode toggle panel on the character select screen.
-/// Only visible when Ironclad, Silent, or Defect is selected.
+/// Always visible regardless of selected character.
 /// Mimics the game's NTickbox styling with hover/press animations and SFX.
 /// </summary>
 internal static class ClassicModePanel
@@ -21,16 +25,17 @@ internal static class ClassicModePanel
     private static TickboxRow? _relicsRow;
     private static TickboxRow? _hybridRow;
     private static TickboxRow? _dedupeRow;
+    private static StartRunLobby? _lobby;
+    private static bool _suppressLobbySync;
 
     internal static bool Exists => _root != null && GodotObject.IsInstanceValid(_root);
-
-    private static bool IsClassicCharacter(CharacterModel? c) => c is Ironclad or Silent or Defect;
 
     internal static void Inject(Control screen)
     {
         if (Exists) return;
         _root = BuildPanel();
         screen.AddChild(_root);
+        UpdatePanelPlacement();
         _root.Visible = false;
     }
 
@@ -43,12 +48,112 @@ internal static class ClassicModePanel
         _relicsRow = null;
         _hybridRow = null;
         _dedupeRow = null;
+        _lobby = null;
+        _suppressLobbySync = false;
     }
 
     internal static void OnCharacterSelected(CharacterModel? character)
     {
+        _ = character;
         if (!Exists || _root == null) return;
-        _root.Visible = IsClassicCharacter(character);
+        _root.Visible = true;
+    }
+
+    internal static void ConfigureLobby(StartRunLobby lobby)
+    {
+        _lobby = lobby;
+        UpdatePanelPlacement();
+        var canEdit = CanLocalEditLobby();
+        ApplyEditability(canEdit);
+        SyncFromLobbyModifiers(lobby.Modifiers, canEdit);
+    }
+
+    private static void UpdatePanelPlacement()
+    {
+        if (!Exists || _root == null)
+            return;
+
+        var multiplayer = _lobby != null && _lobby.NetService.Type != NetGameType.Singleplayer;
+        if (multiplayer)
+        {
+            _root.AnchorLeft = 0.76f;
+            _root.AnchorRight = 0.98f;
+            _root.GrowHorizontal = Control.GrowDirection.Begin;
+        }
+        else
+        {
+            _root.AnchorLeft = 0.02f;
+            _root.AnchorRight = 0.24f;
+            _root.GrowHorizontal = Control.GrowDirection.End;
+        }
+
+        _root.AnchorTop = 0.05f;
+        _root.AnchorBottom = 0.05f;
+        _root.GrowVertical = Control.GrowDirection.End;
+    }
+
+    internal static void SyncFromLobbyModifiers(IReadOnlyList<ModifierModel> modifiers, bool canEdit)
+    {
+        if (!Exists)
+            return;
+
+        // If no synced state is present (singleplayer/default), keep local config.
+        if (modifiers == null || modifiers.Count == 0)
+        {
+            ApplyEditability(canEdit);
+            RefreshCardToggleRows();
+            return;
+        }
+
+        _suppressLobbySync = true;
+        try
+        {
+            ClassicConfig.ClassicCards = modifiers.Any(m => m is ClassicCardsCustomModeModifier);
+            ClassicConfig.ClassicRelics = modifiers.Any(m => m is ClassicRelicsCustomModeModifier);
+            ClassicConfig.ClassicHybrid = modifiers.Any(m => m is ClassicHybridCustomModeModifier);
+            ClassicConfig.HybridDedupe = modifiers.Any(m => m is ClassicHybridDedupeCustomModeModifier);
+            RefreshCardToggleRows();
+            ApplyEditability(canEdit);
+        }
+        finally
+        {
+            _suppressLobbySync = false;
+        }
+    }
+
+    internal static void SyncLobbyFromLocalConfig()
+    {
+        if (_suppressLobbySync || _lobby == null)
+            return;
+
+        if (!CanLocalEditLobby())
+            return;
+
+        var modifiers = new List<ModifierModel>();
+        if (ClassicConfig.ClassicCards)
+            modifiers.Add(ModelDb.Modifier<ClassicCardsCustomModeModifier>().ToMutable());
+        if (ClassicConfig.ClassicRelics)
+            modifiers.Add(ModelDb.Modifier<ClassicRelicsCustomModeModifier>().ToMutable());
+        if (ClassicConfig.ClassicHybrid)
+            modifiers.Add(ModelDb.Modifier<ClassicHybridCustomModeModifier>().ToMutable());
+        if (ClassicConfig.HybridDedupe)
+            modifiers.Add(ModelDb.Modifier<ClassicHybridDedupeCustomModeModifier>().ToMutable());
+
+        _lobby.SetModifiers(modifiers);
+    }
+
+    private static bool CanLocalEditLobby()
+    {
+        return _lobby == null || _lobby.NetService.Type != NetGameType.Client;
+    }
+
+    private static void ApplyEditability(bool canEdit)
+    {
+        _cardsRow?.SetEnabled(canEdit);
+        _relicsRow?.SetEnabled(canEdit);
+        _hybridRow?.SetEnabled(canEdit);
+        // Dedupe still depends on Hybrid. Keep disabled if Hybrid is off.
+        _dedupeRow?.SetEnabled(canEdit && ClassicConfig.ClassicHybrid);
     }
 
     private static void RefreshCardToggleRows()
@@ -67,7 +172,7 @@ internal static class ClassicModePanel
         _dedupeRow.SetValueSilently(ClassicConfig.HybridDedupe);
 
         // Dedupe only has effect under Hybrid mode.
-        _dedupeRow.SetEnabled(ClassicConfig.ClassicHybrid);
+        _dedupeRow.SetEnabled(CanLocalEditLobby() && ClassicConfig.ClassicHybrid);
     }
 
     private static PanelContainer BuildPanel()
@@ -76,12 +181,6 @@ internal static class ClassicModePanel
 
         var root = new PanelContainer();
         root.Name = "ClassicModePanel";
-        root.AnchorLeft = 0.02f;
-        root.AnchorRight = 0.24f;
-        root.AnchorTop = 0.05f;
-        root.AnchorBottom = 0.05f;
-        root.GrowHorizontal = Control.GrowDirection.End;
-        root.GrowVertical = Control.GrowDirection.End;
         root.MouseFilter = Control.MouseFilterEnum.Ignore;
 
         var style = new StyleBoxFlat();
@@ -128,6 +227,7 @@ internal static class ClassicModePanel
                     ClassicConfig.ClassicHybrid = false;
                 ClassicConfig.ClassicCards = on;
                 RefreshCardToggleRows();
+                SyncLobbyFromLocalConfig();
                 Log.Info($"[ClassicMode] Classic Cards: {on}");
             });
         vbox.AddChild(_cardsRow);
@@ -137,6 +237,7 @@ internal static class ClassicModePanel
             ClassicConfig.ClassicRelics, on =>
             {
                 ClassicConfig.ClassicRelics = on;
+                SyncLobbyFromLocalConfig();
                 Log.Info($"[ClassicMode] Classic Relics: {on}");
             });
         vbox.AddChild(_relicsRow);
@@ -159,6 +260,7 @@ internal static class ClassicModePanel
                 if (on && ClassicConfig.ClassicCards)
                     ClassicConfig.ClassicCards = false;
                 RefreshCardToggleRows();
+                SyncLobbyFromLocalConfig();
                 Log.Info($"[ClassicMode] Hybrid Mode: {on}");
             });
         vbox.AddChild(_hybridRow);
@@ -174,6 +276,7 @@ internal static class ClassicModePanel
                 }
                 ClassicConfig.HybridDedupe = on;
                 RefreshCardToggleRows();
+                SyncLobbyFromLocalConfig();
                 Log.Info($"[ClassicMode] Hybrid Dedupe: {on}");
             });
         vbox.AddChild(_dedupeRow);
@@ -360,6 +463,7 @@ internal static class ClassicModeCharSelectSingleplayerPatch
     {
         ClassicModePanel.Remove();
         ClassicModePanel.Inject(__instance);
+        ClassicModePanel.ConfigureLobby(__instance.Lobby);
     }
 }
 
@@ -370,6 +474,7 @@ internal static class ClassicModeCharSelectHostPatch
     {
         ClassicModePanel.Remove();
         ClassicModePanel.Inject(__instance);
+        ClassicModePanel.ConfigureLobby(__instance.Lobby);
     }
 }
 
@@ -380,6 +485,7 @@ internal static class ClassicModeCharSelectClientPatch
     {
         ClassicModePanel.Remove();
         ClassicModePanel.Inject(__instance);
+        ClassicModePanel.ConfigureLobby(__instance.Lobby);
     }
 }
 
@@ -389,5 +495,15 @@ internal static class ClassicModeCharSelectVisibilityPatch
     static void Postfix(CharacterModel characterModel)
     {
         ClassicModePanel.OnCharacterSelected(characterModel);
+    }
+}
+
+[HarmonyPatch(typeof(NCharacterSelectScreen), nameof(NCharacterSelectScreen.ModifiersChanged))]
+internal static class ClassicModeCharSelectModifiersChangedPatch
+{
+    static bool Prefix(NCharacterSelectScreen __instance)
+    {
+        ClassicModePanel.ConfigureLobby(__instance.Lobby);
+        return false;
     }
 }

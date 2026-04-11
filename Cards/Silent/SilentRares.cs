@@ -352,7 +352,7 @@ public sealed class Malaise_C : ClassicSilentCard
         {
             return;
         }
-        await PowerCmd.Apply<MalaiseTempStrengthPower>(cardPlay.Target, amount, Owner.Creature, this);
+        await PowerCmd.Apply<StrengthPower>(cardPlay.Target, -amount, Owner.Creature, this);
         await PowerCmd.Apply<WeakPower>(cardPlay.Target, amount, Owner.Creature, this);
     }
 }

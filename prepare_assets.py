@@ -126,6 +126,14 @@ _PORTRAIT_SOURCE_BASENAME_OVERRIDES = {
     ("defect", "compiled_driver"): "compile_driver",
 }
 
+# STS1 power icon import map:
+# - small: atlas entry used for under-character power row icon (generated as Godot AtlasTexture .tres)
+# - big: atlas entry cropped to powers/<id>.png for large tooltip panel fallback
+_STS1_POWER_ICON_IMPORT_MAP = {
+    "FLEX_POWER": {"small": "48/flex", "big": "128/flex"},
+    "BERSERK_POWER_C": {"small": "48/berserk", "big": "128/berserk"},
+}
+
 
 def _normalize_portrait_basename(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", name.lower())
@@ -329,6 +337,159 @@ def copy_relic_images(sts1_root: str, pck_root: str):
     return total
 
 
+def _parse_sts1_atlas_entries(atlas_path: str):
+    """Parse a LibGDX atlas file and return entry -> {xy, size}."""
+    entries = {}
+    current_name = None
+    current_data = {}
+
+    with open(atlas_path, "r", encoding="utf-8") as f:
+        for raw in f:
+            line = raw.rstrip("\n")
+            stripped = line.strip()
+            if not stripped:
+                continue
+
+            # Atlas entry header (non-indented, not a key:value metadata line)
+            if not line.startswith(" ") and ":" not in stripped:
+                if current_name and "xy" in current_data and "size" in current_data:
+                    entries[current_name] = current_data
+                current_name = stripped
+                current_data = {}
+                continue
+
+            if current_name is None:
+                continue
+
+            if stripped.startswith("xy:"):
+                x_str, y_str = stripped.split(":", 1)[1].split(",")
+                current_data["xy"] = (int(x_str.strip()), int(y_str.strip()))
+            elif stripped.startswith("size:"):
+                w_str, h_str = stripped.split(":", 1)[1].split(",")
+                current_data["size"] = (int(w_str.strip()), int(h_str.strip()))
+
+    if current_name and "xy" in current_data and "size" in current_data:
+        entries[current_name] = current_data
+
+    return entries
+
+
+def _write_atlas_texture_tres(tres_path: str, atlas_res_path: str, xy: tuple[int, int], size: tuple[int, int]):
+    x, y = xy
+    w, h = size
+    content = (
+        '[gd_resource type="AtlasTexture" load_steps=2 format=3]\n\n'
+        f'[ext_resource type="Texture2D" path="{atlas_res_path}" id="1"]\n\n'
+        '[resource]\n'
+        'atlas = ExtResource("1")\n'
+        f'region = Rect2({x}, {y}, {w}, {h})\n'
+    )
+    with open(tres_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+
+def copy_power_icons_from_sts1(sts1_root: str, pck_root: str):
+    """
+    Import selected STS1 power icons into STS2 paths expected by PowerModel.
+
+    This creates:
+    - images/atlases/power_atlas.sprites/<power_id_lower>.tres  (atlas-loader compatible path)
+    - images/powers/<power_id_lower>.tres                       (direct resource path, bypasses atlas lookup)
+    - images/powers/<power_id_lower>.png                        (optional big icon crop)
+    """
+    src_png = os.path.join(sts1_root, "powers", "powers.png")
+    src_atlas = os.path.join(sts1_root, "powers", "powers.atlas")
+    if not os.path.isfile(src_png) or not os.path.isfile(src_atlas):
+        print(f"  WARNING: Missing STS1 power atlas assets: {src_png} / {src_atlas}")
+        return 0
+
+    entries = _parse_sts1_atlas_entries(src_atlas)
+
+    images_dst = os.path.join(pck_root, "images")
+    os.makedirs(images_dst, exist_ok=True)
+
+    atlases_dst = os.path.join(images_dst, "atlases")
+    sprites_dst = os.path.join(atlases_dst, "power_atlas.sprites")
+    os.makedirs(sprites_dst, exist_ok=True)
+    powers_dst = os.path.join(images_dst, "powers")
+    os.makedirs(powers_dst, exist_ok=True)
+
+    atlas_png_name = "powers.png"
+    atlas_png_dst = os.path.join(images_dst, atlas_png_name)
+    shutil.copy2(src_png, atlas_png_dst)
+
+    imported_small = 0
+    imported_big_tres = 0
+    imported_big_png = 0
+    can_extract_big = True
+    image_mod = None
+
+    try:
+        from PIL import Image as _PILImage
+        image_mod = _PILImage
+    except ImportError:
+        # Big icon extraction is optional; keep importing all small atlas icons.
+        can_extract_big = False
+        print("  NOTE: Pillow not installed — skipping big power icon extraction.")
+
+    for model_id, cfg in _STS1_POWER_ICON_IMPORT_MAP.items():
+        model_slug = model_id.lower()
+
+        small_key = cfg.get("small")
+        small_entry = entries.get(small_key) if small_key else None
+        if not small_entry:
+            print(f"  WARNING: Missing STS1 small power entry for {model_id}: {small_key}")
+            continue
+
+        tres_path = os.path.join(sprites_dst, f"{model_slug}.tres")
+        _write_atlas_texture_tres(
+            tres_path=tres_path,
+            atlas_res_path=f"res://images/{atlas_png_name}",
+            xy=small_entry["xy"],
+            size=small_entry["size"],
+        )
+
+        # Direct-load fallback path that does not go through AtlasResourceLoader parsing.
+        _write_atlas_texture_tres(
+            tres_path=os.path.join(powers_dst, f"{model_slug}.tres"),
+            atlas_res_path=f"res://images/{atlas_png_name}",
+            xy=small_entry["xy"],
+            size=small_entry["size"],
+        )
+        imported_small += 1
+
+        big_key = cfg.get("big")
+        big_entry = entries.get(big_key) if big_key else None
+        if not big_entry:
+            continue
+
+        # Always emit a big AtlasTexture resource so runtime big icon loading
+        # does not depend on Pillow being installed.
+        _write_atlas_texture_tres(
+            tres_path=os.path.join(powers_dst, f"{model_slug}_big.tres"),
+            atlas_res_path=f"res://images/{atlas_png_name}",
+            xy=big_entry["xy"],
+            size=big_entry["size"],
+        )
+        imported_big_tres += 1
+
+        if not can_extract_big or image_mod is None:
+            continue
+
+        with image_mod.open(src_png) as image:
+            x, y = big_entry["xy"]
+            w, h = big_entry["size"]
+            cropped = image.crop((x, y, x + w, y + h))
+            cropped.save(os.path.join(powers_dst, f"{model_slug}.png"))
+            imported_big_png += 1
+
+    print(
+        f"  Imported {imported_small} STS1 small power icon(s), "
+        f"{imported_big_tres} big .tres icon(s), and {imported_big_png} big .png icon(s)."
+    )
+    return imported_small
+
+
 def copy_localization(project_dir: str, pck_root: str):
     """Copy localization JSON files from assets/ to PCK root."""
     assets_dir = os.path.join(project_dir, "assets")
@@ -454,7 +615,7 @@ _CUSTOM_POWER_LOC = {
         "EvolvePower_C": {"NAME": "Evolve", "DESCRIPTION": "Whenever you draw a Status card, draw {Amount} cards."},
         "FireBreathingPower_C": {"NAME": "Fire Breathing", "DESCRIPTION": "Whenever you draw a Status or Curse card, deal {Amount} damage to ALL enemies."},
         "MetallicizePower_C": {"NAME": "Metallicize", "DESCRIPTION": "At the end of your turn, gain {Amount} Block."},
-        "BerserkPower_C": {"NAME": "Berserk", "DESCRIPTION": "At the start of your turn, gain {Amount} Energy."},
+        "BerserkPower_C": {"NAME": "Berserk", "DESCRIPTION": "At the start of your turn, gain {energyPrefix:energyIcons(1)}."},
         "BrutalityPower_C": {"NAME": "Brutality", "DESCRIPTION": "At the start of your turn, lose 1 HP and draw {Amount} cards."},
         "AThousandCutsPower": {"NAME": "A Thousand Cuts", "DESCRIPTION": "Whenever you play a card, deal {Amount} damage to ALL enemies."},
         "ChokeHoldPower": {"NAME": "Choke", "DESCRIPTION": "Whenever the player plays a card this turn, this enemy loses {Amount} HP."},
@@ -480,7 +641,7 @@ _CUSTOM_POWER_LOC = {
         "EvolvePower_C": {"NAME": "\u8fdb\u5316", "DESCRIPTION": "\u6bcf\u5f53\u4f60\u62bd\u5230\u72b6\u6001\u724c\u65f6\uff0c\u62bd {Amount} \u5f20\u724c\u3002"},
         "FireBreathingPower_C": {"NAME": "\u55b7\u706b", "DESCRIPTION": "\u6bcf\u5f53\u4f60\u62bd\u5230\u72b6\u6001\u6216\u8bc5\u5492\u724c\u65f6\uff0c\u5bf9\u6240\u6709\u654c\u4eba\u9020\u6210 {Amount} \u70b9\u4f24\u5bb3\u3002"},
         "MetallicizePower_C": {"NAME": "\u91d1\u5c5e\u5316", "DESCRIPTION": "\u56de\u5408\u7ed3\u675f\u65f6\uff0c\u83b7\u5f97 {Amount} \u70b9\u683c\u6321\u3002"},
-        "BerserkPower_C": {"NAME": "\u72c2\u66b4", "DESCRIPTION": "\u56de\u5408\u5f00\u59cb\u65f6\uff0c\u83b7\u5f97 {Amount} \u70b9\u80fd\u91cf\u3002"},
+        "BerserkPower_C": {"NAME": "\u72c2\u66b4", "DESCRIPTION": "\u56de\u5408\u5f00\u59cb\u65f6\uff0c\u83b7\u5f97{energyPrefix:energyIcons(1)}\u3002"},
         "BrutalityPower_C": {"NAME": "\u6b8b\u66b4", "DESCRIPTION": "\u56de\u5408\u5f00\u59cb\u65f6\uff0c\u5931\u53bb 1 \u70b9\u751f\u547d\uff0c\u62bd {Amount} \u5f20\u724c\u3002"},
         "AThousandCutsPower": {"NAME": "\u51cc\u8fdf", "DESCRIPTION": "\u4f60\u6bcf\u6253\u51fa\u4e00\u5f20\u724c\uff0c\u5c31\u5bf9\u6240\u6709\u654c\u4eba\u9020\u6210 {Amount} \u70b9\u4f24\u5bb3\u3002"},
         "ChokeHoldPower": {"NAME": "\u7a92\u606f", "DESCRIPTION": "\u73a9\u5bb6\u6bcf\u6253\u51fa\u4e00\u5f20\u724c\uff0c\u8be5\u654c\u4eba\u5931\u53bb {Amount} \u70b9\u751f\u547d\u3002"},
@@ -543,11 +704,17 @@ _TERM_HIGHLIGHT_MAP = [
     ("\u6613\u4f24", "Vulnerable"),
     ("\u865a\u5f31", "Weak"),
     ("\u4e2d\u6bd2", "Poison"),
+    ("\u65e0\u5b9e\u4f53", "Intangible"),
+    ("\u7f13\u51b2", "Buffer"),
+    ("\u8346\u68d8", "Thorns"),
+    ("\u518d\u751f", "Regen"),
     ("\u683c\u6321", "Block"),
     ("\u529b\u91cf", "Strength"),
     ("\u654f\u6377", "Dexterity"),
     ("\u96c6\u4e2d", "Focus"),
     ("\u4eba\u5de5\u5236\u54c1", "Artifact"),
+    ("\u91d1\u5c5e\u5316", "Plated Armor"),
+    ("\u4eea\u5f0f", "Ritual"),
     ("\u5145\u80fd\u7403", "Orb"),
     ("\u6d88\u8017", "Exhaust"),
     ("\u56fa\u6709", "Innate"),
@@ -638,6 +805,43 @@ def _apply_zh_spacing_and_highlight(zhs_cards: dict, eng_cards: dict):
     print(f"  zh spacing/highlight changes: {changed_desc_count}")
     print(f"  en highlight sync changes: {changed_en_count}")
     print(f"  terms highlighted: {terms_text}")
+
+
+def _apply_zh_term_highlight_to_loc_dict(zhs_loc: dict, eng_loc: dict, label: str):
+    """Apply zh spacing/highlight and EN sync to generic loc description fields."""
+    changed_desc_count = 0
+    changed_en_count = 0
+    all_changed_terms = set()
+
+    zh_to_en = {zh: en for zh, en in _TERM_HIGHLIGHT_MAP}
+
+    for key in list(zhs_loc.keys()):
+        if not (key.endswith(".description") or key.endswith(".upgradedDescription")):
+            continue
+
+        original = str(zhs_loc.get(key, ""))
+        fixed, changed_terms = _normalize_zh_description(original)
+
+        if fixed != original:
+            zhs_loc[key] = fixed
+            changed_desc_count += 1
+
+        if changed_terms and key in eng_loc:
+            en_text = str(eng_loc.get(key, ""))
+            en_fixed = en_text
+            for zh_term in changed_terms:
+                all_changed_terms.add(zh_term)
+                en_term = zh_to_en[zh_term]
+                en_fixed = _sync_english_highlight(en_fixed, en_term)
+
+            if en_fixed != en_text:
+                eng_loc[key] = en_fixed
+                changed_en_count += 1
+
+    terms_text = ", ".join(sorted(all_changed_terms)) if all_changed_terms else "(none)"
+    print(f"  [{label}] zh spacing/highlight changes: {changed_desc_count}")
+    print(f"  [{label}] en highlight sync changes: {changed_en_count}")
+    print(f"  [{label}] terms highlighted: {terms_text}")
 
 # Cards whose CanonicalVars declare `RepeatVar` rather than a MagicNumber
 # DynamicVar. The STS1 converter emits `{MagicNumber:diff()}` for `!M!`, but
@@ -965,7 +1169,7 @@ def _apply_card_specific_desc_fixes(cls_name: str, lang: str, desc: str) -> str:
             "Metallicize_C": {"Block": "MagicNumber"},
         "GeneticAlgorithm_C": {"MagicNumber": "Increase"},
         "Heatsinks_C": {"Cards": "Heatsinks"},
-        "HeavyBlade_C": {"MagicNumber": "StrengthMultiplier"},
+        "HeavyBlade_C": {"Damage": "CalculatedDamage", "MagicNumber": "StrengthMultiplier"},
         "Hemokinesis_C": {"MagicNumber": "HpLoss"},
         "Juggernaut_C": {"MagicNumber": "JuggernautPower"},
         "Lockdown_C": {"MagicNumber": "LockOnPower_C"},
@@ -1066,6 +1270,8 @@ def generate_localization(sts1_root, project_dir):
         print("  Removed old assets/localization/ (was overriding base game)")
 
     card_loc_by_lang = {}
+    relic_loc_by_lang = {}
+    power_loc_by_lang = {}
     out_dir_by_lang = {}
 
     for lang in langs:
@@ -1160,9 +1366,7 @@ def generate_localization(sts1_root, project_dir):
                 slug = _slugify(class_name)
                 relic_loc[f"{slug}.title"] = entry["NAME"]
                 relic_loc[f"{slug}.description"] = entry["DESCRIPTION"]
-            with open(os.path.join(out_dir, "relics.json"), 'w', encoding='utf-8') as f:
-                json.dump(relic_loc, f, ensure_ascii=False, indent=2)
-            print(f"  Generated {lang}/relics.json: {len(relic_src)} entries")
+            relic_loc_by_lang[lang] = relic_loc
 
         # --- Powers ---
         power_src = _CUSTOM_POWER_LOC.get(lang, {})
@@ -1172,13 +1376,15 @@ def generate_localization(sts1_root, project_dir):
                 slug = _slugify(class_name)
                 power_loc[f"{slug}.title"] = entry["NAME"]
                 power_loc[f"{slug}.description"] = entry["DESCRIPTION"]
-            with open(os.path.join(out_dir, "powers.json"), 'w', encoding='utf-8') as f:
-                json.dump(power_loc, f, ensure_ascii=False, indent=2)
-            print(f"  Generated {lang}/powers.json: {len(power_src)} entries")
+            power_loc_by_lang[lang] = power_loc
 
     # Run zh cleanup/highlight rules after both language card dictionaries are built.
     if "eng" in card_loc_by_lang and "zhs" in card_loc_by_lang:
         _apply_zh_spacing_and_highlight(card_loc_by_lang["zhs"], card_loc_by_lang["eng"])
+    if "eng" in relic_loc_by_lang and "zhs" in relic_loc_by_lang:
+        _apply_zh_term_highlight_to_loc_dict(relic_loc_by_lang["zhs"], relic_loc_by_lang["eng"], "relics")
+    if "eng" in power_loc_by_lang and "zhs" in power_loc_by_lang:
+        _apply_zh_term_highlight_to_loc_dict(power_loc_by_lang["zhs"], power_loc_by_lang["eng"], "powers")
 
     # Write cards.json for each language.
     for lang in langs:
@@ -1188,6 +1394,16 @@ def generate_localization(sts1_root, project_dir):
         with open(os.path.join(out_dir, "cards.json"), 'w', encoding='utf-8') as f:
             json.dump(card_loc_by_lang[lang], f, ensure_ascii=False, indent=2)
         print(f"  Generated {lang}/cards.json: {len(card_loc_by_lang[lang]) // 2} entries")
+
+        if lang in relic_loc_by_lang:
+            with open(os.path.join(out_dir, "relics.json"), 'w', encoding='utf-8') as f:
+                json.dump(relic_loc_by_lang[lang], f, ensure_ascii=False, indent=2)
+            print(f"  Generated {lang}/relics.json: {len(relic_loc_by_lang[lang]) // 2} entries")
+
+        if lang in power_loc_by_lang:
+            with open(os.path.join(out_dir, "powers.json"), 'w', encoding='utf-8') as f:
+                json.dump(power_loc_by_lang[lang], f, ensure_ascii=False, indent=2)
+            print(f"  Generated {lang}/powers.json: {len(power_loc_by_lang[lang]) // 2} entries")
 
 
 def main():
@@ -1235,6 +1451,10 @@ def main():
     # 4. Copy STS1 relic images
     print("  Copying STS1 relic images...")
     copy_relic_images(sts1_root, pck_root)
+
+    # 5. Copy selected STS1 power icons (atlas slices) for classic powers
+    print("  Importing STS1 power icons...")
+    copy_power_icons_from_sts1(sts1_root, pck_root)
 
     print("[ClassicMode] Asset preparation complete.")
 

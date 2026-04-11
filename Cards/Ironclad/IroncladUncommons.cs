@@ -107,10 +107,11 @@ public sealed class Dropkick_C : ClassicIroncladCard
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         ArgumentNullException.ThrowIfNull(cardPlay.Target);
+        bool hadVulnerable = cardPlay.Target.HasPower<VulnerablePower>();
         await DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
             .WithHitFx("vfx/vfx_attack_blunt", null, "blunt_attack.mp3")
             .Execute(choiceContext);
-        if (cardPlay.Target.HasPower<VulnerablePower>())
+        if (hadVulnerable)
         {
             await PlayerCmd.GainEnergy(1, Owner);
             await CardPileCmd.Draw(choiceContext, 1m, Owner);
@@ -132,7 +133,12 @@ public sealed class HeavyBlade_C : ClassicIroncladCard
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(14m, ValueProp.Move),
+        new CalculationBaseVar(14m),
+        new ExtraDamageVar(1m),
+        new CalculatedDamageVar(ValueProp.Move)
+            .WithMultiplier((CardModel card, Creature? _) =>
+                card.Owner.Creature.GetPowerAmount<StrengthPower>()
+                * (card.DynamicVars["StrengthMultiplier"].IntValue - 1)),
         new DynamicVar("StrengthMultiplier", 3m)
     ];
 
@@ -144,11 +150,7 @@ public sealed class HeavyBlade_C : ClassicIroncladCard
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         ArgumentNullException.ThrowIfNull(cardPlay.Target);
-        // Standard attack applies 1x strength; add extra (multiplier-1)x strength
-        decimal strength = Owner.Creature.GetPowerAmount<StrengthPower>();
-        int multiplier = DynamicVars["StrengthMultiplier"].IntValue;
-        decimal extraStrength = strength * (multiplier - 1);
-        await DamageCmd.Attack(DynamicVars.Damage.BaseValue + extraStrength).FromCard(this)
+        await DamageCmd.Attack(DynamicVars.CalculatedDamage).FromCard(this)
             .Targeting(cardPlay.Target)
             .WithHitFx("vfx/vfx_heavy_blunt", null, "heavy_attack.mp3")
             .Execute(choiceContext);

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using MegaCrit.Sts2.Core.Entities.UI;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
@@ -84,13 +85,13 @@ internal static class CustomRunClassicOptionsApplyToConfigPatch
     static void Prefix(NCustomRunScreen __instance, IReadOnlyList<ModifierModel> modifiers)
     {
         var normalized = CustomRunClassicOptionsRules.Normalize(modifiers);
-        var character = __instance.Lobby.LocalPlayer.character;
-        var classicEligible = CustomRunClassicOptionsRules.IsClassicCharacter(character);
 
-        ClassicConfig.ClassicCards = classicEligible && normalized.Any(m => m is ClassicCardsCustomModeModifier);
-        ClassicConfig.ClassicRelics = classicEligible && normalized.Any(m => m is ClassicRelicsCustomModeModifier);
-        ClassicConfig.ClassicHybrid = classicEligible && normalized.Any(m => m is ClassicHybridCustomModeModifier);
-        ClassicConfig.HybridDedupe = classicEligible && normalized.Any(m => m is ClassicHybridDedupeCustomModeModifier);
+        // Always apply from the synchronized modifier list; in multiplayer,
+        // host is authoritative and clients follow the host's selections.
+        ClassicConfig.ClassicCards = normalized.Any(m => m is ClassicCardsCustomModeModifier);
+        ClassicConfig.ClassicRelics = normalized.Any(m => m is ClassicRelicsCustomModeModifier);
+        ClassicConfig.ClassicHybrid = normalized.Any(m => m is ClassicHybridCustomModeModifier);
+        ClassicConfig.HybridDedupe = normalized.Any(m => m is ClassicHybridDedupeCustomModeModifier);
     }
 }
 
@@ -112,10 +113,40 @@ internal static class CustomRunClassicOptionsOpenedPatch
     }
 }
 
+[HarmonyPatch(typeof(NCustomRunScreen), nameof(NCustomRunScreen.PlayerChanged))]
+internal static class CustomRunClassicOptionsPlayerChangedPatch
+{
+    static void Postfix(NCustomRunScreen __instance)
+    {
+        CustomRunClassicOptionsRules.ApplyCharacterGate(__instance, __instance.Lobby.LocalPlayer.character);
+    }
+}
+
+[HarmonyPatch(typeof(NCustomRunScreen), nameof(NCustomRunScreen.PlayerConnected))]
+internal static class CustomRunClassicOptionsPlayerConnectedPatch
+{
+    static void Postfix(NCustomRunScreen __instance)
+    {
+        CustomRunClassicOptionsRules.ApplyCharacterGate(__instance, __instance.Lobby.LocalPlayer.character);
+    }
+}
+
+[HarmonyPatch(typeof(NCustomRunScreen), nameof(NCustomRunScreen.RemotePlayerDisconnected))]
+internal static class CustomRunClassicOptionsRemotePlayerDisconnectedPatch
+{
+    static void Postfix(NCustomRunScreen __instance)
+    {
+        CustomRunClassicOptionsRules.ApplyCharacterGate(__instance, __instance.Lobby.LocalPlayer.character);
+    }
+}
+
 internal static class CustomRunClassicOptionsRules
 {
     private static readonly AccessTools.FieldRef<NCustomRunModifiersList, List<NRunModifierTickbox>> TickboxesRef =
         AccessTools.FieldRefAccess<NCustomRunModifiersList, List<NRunModifierTickbox>>("_modifierTickboxes");
+
+    private static readonly AccessTools.FieldRef<NCustomRunModifiersList, MultiplayerUiMode> ModeRef =
+        AccessTools.FieldRefAccess<NCustomRunModifiersList, MultiplayerUiMode>("_mode");
 
     private static readonly AccessTools.FieldRef<NCustomRunScreen, NCustomRunModifiersList> ModifiersListRef =
         AccessTools.FieldRefAccess<NCustomRunScreen, NCustomRunModifiersList>("_modifiersList");
@@ -140,6 +171,8 @@ internal static class CustomRunClassicOptionsRules
         var tickboxes = GetTickboxes(list);
         if (tickboxes.Count == 0)
             return;
+
+        var localCanEdit = CanLocalPlayerEdit(list);
 
         var cards = Find<ClassicCardsCustomModeModifier>(tickboxes);
         var hybrid = Find<ClassicHybridCustomModeModifier>(tickboxes);
@@ -170,6 +203,10 @@ internal static class CustomRunClassicOptionsRules
                 dedupe.IsTicked = false;
                 dedupe.Disable();
             }
+            else if (!localCanEdit)
+            {
+                dedupe.Disable();
+            }
             else
             {
                 dedupe.Enable();
@@ -177,9 +214,12 @@ internal static class CustomRunClassicOptionsRules
         }
     }
 
-    public static bool IsClassicCharacter(CharacterModel character)
+    public static bool IsClassicEligibleForLobby(NCustomRunScreen screen, CharacterModel character)
     {
-        return character is Ironclad or Silent or Defect;
+        _ = screen;
+        _ = character;
+        // Keep classic options visible for all characters.
+        return true;
     }
 
     public static void ApplyCharacterGate(NCustomRunScreen screen, CharacterModel character)
@@ -192,29 +232,31 @@ internal static class CustomRunClassicOptionsRules
         if (tickboxes.Count == 0)
             return;
 
-        var classicEligible = IsClassicCharacter(character);
         var cards = Find<ClassicCardsCustomModeModifier>(tickboxes);
         var relics = Find<ClassicRelicsCustomModeModifier>(tickboxes);
         var hybrid = Find<ClassicHybridCustomModeModifier>(tickboxes);
         var dedupe = Find<ClassicHybridDedupeCustomModeModifier>(tickboxes);
 
-        if (!classicEligible)
-        {
-            foreach (var t in new[] { cards, relics, hybrid, dedupe })
-            {
-                if (t == null) continue;
-                t.IsTicked = false;
-                t.Disable();
-            }
-            return;
-        }
-
-        cards?.Enable();
-        relics?.Enable();
-        hybrid?.Enable();
-
         // Re-apply dependency/mutex states after re-enabling.
         Apply(modifiersList, changed: null);
+
+        // Always show classic options for all characters, but only allow editing
+        // from singleplayer/host. Clients stay read-only and follow host sync.
+        var localCanEdit = CanLocalPlayerEdit(modifiersList);
+        foreach (var t in new[] { cards, relics, hybrid, dedupe })
+        {
+            if (t == null) continue;
+            if (localCanEdit)
+                t.Enable();
+            else
+                t.Disable();
+        }
+    }
+
+    private static bool CanLocalPlayerEdit(NCustomRunModifiersList list)
+    {
+        var mode = ModeRef(list);
+        return mode is MultiplayerUiMode.Singleplayer or MultiplayerUiMode.Host;
     }
 
     public static List<ModifierModel> Normalize(IEnumerable<ModifierModel> source)

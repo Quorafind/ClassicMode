@@ -21,8 +21,7 @@ public abstract class ClassicIroncladCard : CardModel
         _portraitName = portraitName;
     }
 
-    // Return the original game pool so encyclopedia filters (c.Pool is IroncladCardPool) match.
-    // The actual pool swap for gameplay is handled by PoolSwitchPatches on Ironclad.CardPool getter.
+    // Keep class identity stable for UI coloring/filtering.
     public override CardPoolModel Pool => ModelDb.CardPool<IroncladCardPool>();
 
     public override string PortraitPath =>
