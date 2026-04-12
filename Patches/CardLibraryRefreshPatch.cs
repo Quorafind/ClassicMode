@@ -2,6 +2,7 @@ using System.Reflection;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.CardPools;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary;
 
@@ -49,6 +50,9 @@ internal static class CardLibraryRefreshPatch
 
     private static readonly FieldInfo? _defectFilterField =
         typeof(NCardLibrary).GetField("_defectFilter", BindingFlags.Instance | BindingFlags.NonPublic);
+
+    private static readonly FieldInfo? _colorlessFilterField =
+        typeof(NCardLibrary).GetField("_colorlessFilter", BindingFlags.Instance | BindingFlags.NonPublic);
 
     static void Prefix(NCardLibrary __instance)
     {
@@ -112,6 +116,7 @@ internal static class CardLibraryRefreshPatch
         var ironcladFilter = _ironcladFilterField?.GetValue(library) as NCardPoolFilter;
         var silentFilter = _silentFilterField?.GetValue(library) as NCardPoolFilter;
         var defectFilter = _defectFilterField?.GetValue(library) as NCardPoolFilter;
+        var colorlessFilter = _colorlessFilterField?.GetValue(library) as NCardPoolFilter;
 
         if (ironcladFilter != null)
         {
@@ -129,6 +134,28 @@ internal static class CardLibraryRefreshPatch
         {
             poolFilters[defectFilter] = c =>
                 c.Pool is DefectCardPool or ClassicDefectCardPool or HybridDefectCardPool;
+        }
+
+        if (colorlessFilter != null)
+        {
+            poolFilters[colorlessFilter] = c =>
+                c.Pool is ColorlessCardPool && !ShouldHideUltimateFromColorlessTab(c);
+        }
+    }
+
+    private static bool ShouldHideUltimateFromColorlessTab(CardModel card)
+    {
+        if (!ClassicConfig.ClassicColorless)
+            return false;
+
+        try
+        {
+            return card.Id == ModelDb.Card<UltimateStrike>().Id
+                || card.Id == ModelDb.Card<UltimateDefend>().Id;
+        }
+        catch
+        {
+            return false;
         }
     }
 }

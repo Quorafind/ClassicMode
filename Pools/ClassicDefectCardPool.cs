@@ -1,5 +1,8 @@
 using Godot;
+using System.Linq;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.CardPools;
 
 namespace ClassicModeMod;
 
@@ -17,8 +20,8 @@ public sealed class ClassicDefectCardPool : CardPoolModel
 
     protected override CardModel[] GenerateAllCards()
     {
-        return
-        [
+        var classicCards = new CardModel[]
+        {
             // ── Basic ──
             ModelDb.Card<StrikeDefect_C>(),
             ModelDb.Card<DefendDefect_C>(),
@@ -111,6 +114,12 @@ public sealed class ClassicDefectCardPool : CardPoolModel
             ModelDb.Card<Electrodynamics_C>(),
             ModelDb.Card<MachineLearning_C>(),
             ModelDb.Card<SelfRepair_C>(),
-        ];
+        };
+
+        return classicCards
+        .Concat(ModelDb.CardPool<DefectCardPool>().AllCards.Where(c => c.Rarity == CardRarity.Ancient))
+        .GroupBy(c => c.Id)
+        .Select(g => g.First())
+        .ToArray();
     }
 }

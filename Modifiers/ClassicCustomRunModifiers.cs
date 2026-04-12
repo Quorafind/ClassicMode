@@ -1,6 +1,9 @@
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.CardPools;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Helpers;
+using MegaCrit.Sts2.Core.Runs;
 using Godot;
 
 namespace ClassicModeMod;
@@ -58,4 +61,77 @@ public sealed class ClassicHybridDedupeCustomModeModifier : ClassicCustomModeMod
     public override LocString Title => new("modifiers", "CLASSIC_CUSTOM_HYBRID_DEDUPE.title");
 
     public override LocString Description => new("modifiers", "CLASSIC_CUSTOM_HYBRID_DEDUPE.description");
+}
+
+public sealed class ClassicColorlessCustomModeModifier : ClassicCustomModeModifierBase
+{
+    public override LocString Title => new("modifiers", "CLASSIC_CUSTOM_COLORLESS.title");
+
+    public override LocString Description => new("modifiers", "CLASSIC_CUSTOM_COLORLESS.description");
+}
+
+public sealed class ClassicColorlessHybridCustomModeModifier : ClassicCustomModeModifierBase
+{
+    public override LocString Title => new("modifiers", "CLASSIC_CUSTOM_COLORLESS_HYBRID.title");
+
+    public override LocString Description => new("modifiers", "CLASSIC_CUSTOM_COLORLESS_HYBRID.description");
+}
+
+public sealed class ClassicColorlessDedupeCustomModeModifier : ClassicCustomModeModifierBase
+{
+    public override LocString Title => new("modifiers", "CLASSIC_CUSTOM_COLORLESS_DEDUPE.title");
+
+    public override LocString Description => new("modifiers", "CLASSIC_CUSTOM_COLORLESS_DEDUPE.description");
+}
+
+public sealed class ColorlessCardRewardsCustomModeModifier : ClassicCustomModeModifierBase
+{
+    public override LocString Title => new("modifiers", "CLASSIC_CUSTOM_COLORLESS_REWARDS.title");
+
+    public override LocString Description => new("modifiers", "CLASSIC_CUSTOM_COLORLESS_REWARDS.description");
+
+    public override CardCreationOptions ModifyCardRewardCreationOptions(Player player, CardCreationOptions options)
+    {
+        return MergeColorlessPool(player, options);
+    }
+
+    public override CardCreationOptions ModifyCardRewardCreationOptionsLate(Player player, CardCreationOptions options)
+    {
+        return MergeColorlessPool(player, options);
+    }
+
+    private static CardCreationOptions MergeColorlessPool(Player player, CardCreationOptions options)
+    {
+        if (options.Source != CardCreationSource.Encounter)
+            return options;
+
+        if (options.Flags.HasFlag(CardCreationFlags.NoCardPoolModifications))
+            return options;
+
+        var colorlessPool = ModelDb.CardPool<ColorlessCardPool>();
+
+        if (options.CustomCardPool != null)
+        {
+            if (options.CustomCardPool.Any(c => c.Pool is ColorlessCardPool))
+                return options;
+
+            var colorlessCards = colorlessPool.GetUnlockedCards(
+                player.UnlockState,
+                player.RunState.CardMultiplayerConstraint);
+
+            return options.WithCustomPool(
+                options.CustomCardPool
+                    .Concat(colorlessCards)
+                    .DistinctBy(c => c.Id),
+                options.RarityOdds);
+        }
+
+        if (options.CardPools.Any(p => p is ColorlessCardPool))
+            return options;
+
+        var mergedPools = options.CardPools.ToList();
+        mergedPools.Add(colorlessPool);
+
+        return options.WithCardPools(mergedPools, options.CardPoolFilter);
+    }
 }

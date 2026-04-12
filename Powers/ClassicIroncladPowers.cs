@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
 
 namespace ClassicModeMod;
@@ -124,9 +125,33 @@ public sealed class BrutalityPower_C : PowerModel
             return;
 
         Flash();
-        // Lose 1 HP (unblockable self-damage)
-        await CreatureCmd.Damage(new ThrowingPlayerChoiceContext(), base.Owner, 1m, ValueProp.Unblockable | ValueProp.Unpowered, null, null);
+        // STS1 stacking behavior: both HP loss and card draw scale with Amount.
+        await CreatureCmd.Damage(new ThrowingPlayerChoiceContext(), base.Owner, base.Amount, ValueProp.Unblockable | ValueProp.Unpowered, null, null);
         // Draw Amount cards
         await CardPileCmd.Draw(new ThrowingPlayerChoiceContext(), base.Amount, base.Owner.Player);
+    }
+}
+
+/// <summary>
+/// STS1 Rupture: Whenever you lose HP from one of your own cards, gain Amount Strength.
+/// </summary>
+public sealed class RupturePower_C : PowerModel
+{
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature target, DamageResult result, ValueProp props, Creature? dealer, CardModel? cardSource)
+    {
+        if (target != base.Owner)
+            return;
+        if (result.UnblockedDamage <= 0)
+            return;
+
+        // STS1 behavior: only self HP loss originating from the owner's cards counts.
+        if (cardSource?.Owner?.Creature != base.Owner)
+            return;
+
+        Flash();
+        await PowerCmd.Apply<StrengthPower>(base.Owner, base.Amount, base.Owner, null);
     }
 }

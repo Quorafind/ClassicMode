@@ -271,21 +271,15 @@ public sealed class SneakyStrike_C : ClassicSilentCard
     {
     }
 
-    public override bool TryModifyEnergyCostInCombat(CardModel card, decimal originalCost, out decimal modifiedCost)
-    {
-        modifiedCost = originalCost;
-        if (card != this) return false;
-        if (!HasDiscardedThisTurn) return false;
-        modifiedCost = 0m;
-        return true;
-    }
-
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         ArgumentNullException.ThrowIfNull(cardPlay.Target);
         await DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
             .WithHitFx("vfx/vfx_dramatic_stab", null, "blunt_attack.mp3")
             .Execute(choiceContext);
+
+        if (HasDiscardedThisTurn)
+            await PlayerCmd.GainEnergy(2m, Owner);
     }
 
     protected override void OnUpgrade()

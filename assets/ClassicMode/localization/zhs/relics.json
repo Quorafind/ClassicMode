@@ -1,18 +1,18 @@
 {
   "MARK_OF_PAIN.title": "苦痛之印",
-  "MARK_OF_PAIN.description": "回合开始时获得 {energyPrefix:energyIcons(1)}。战斗开始时，将 2 张伤口洗入你的抽牌堆。",
+  "MARK_OF_PAIN.description": "回合开始时获得{energyPrefix:energyIcons(1)}。战斗开始时，将2张伤口洗入你的抽牌堆。",
   "CHAMPION_BELT.title": "冠军腰带",
-  "CHAMPION_BELT.description": "每当你施加易伤时，施加 {WeakAmount} 层虚弱。",
+  "CHAMPION_BELT.description": "每当你施加[gold]易伤[/gold]时，施加{WeakAmount}层[gold]虚弱[/gold]。",
   "WRIST_BLADE.title": "腕刃",
-  "WRIST_BLADE.description": "0 耗能的攻击造成额外 {ExtraDamage} 点伤害。",
+  "WRIST_BLADE.description": "0耗能的[gold]攻击[/gold]造成额外{ExtraDamage}点伤害。",
   "HOVERING_KITE.title": "悬浮风筝",
-  "HOVERING_KITE.description": "每回合第一次丢弃牌时，获得 {energyPrefix:energyIcons(1)}。",
+  "HOVERING_KITE.description": "每回合第一次丢弃牌时，获得{energyPrefix:energyIcons(1)}。",
   "THE_SPECIMEN.title": "标本",
-  "THE_SPECIMEN.description": "每当一个敌人死亡时，将其中毒转移给随机敌人。",
+  "THE_SPECIMEN.description": "每当一个敌人死亡时，将其[gold]中毒[/gold]转移给随机敌人。",
   "FROZEN_CORE.title": "冰封核心",
-  "FROZEN_CORE.description": "如果你回合结束时有空的充能球槽，引导 1 个寒霜。",
+  "FROZEN_CORE.description": "如果你回合结束时有空的[gold]充能球[/gold]槽，引导1个寒霜。",
   "INSERTER.title": "插入器",
-  "INSERTER.description": "每 2 回合，获得 1 个充能球槽。",
+  "INSERTER.description": "每2回合，获得1个[gold]充能球[/gold]槽。",
   "NUCLEAR_BATTERY.title": "核电池",
-  "NUCLEAR_BATTERY.description": "每场战斗开始时，引导 1 个等离子。"
+  "NUCLEAR_BATTERY.description": "每场战斗开始时，引导1个等离子。"
 }

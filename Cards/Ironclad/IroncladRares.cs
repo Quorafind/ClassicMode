@@ -381,9 +381,6 @@ public sealed class Offering_C : ClassicIroncladCard
 // STS1 Barricade: 3 energy (2 upgraded). Block not removed at start of turn.
 public sealed class Barricade_C : ClassicIroncladCard
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-        [HoverTipFactory.FromPower<BarricadePower>()];
-
     public Barricade_C()
         : base("barricade", 3, CardType.Power, CardRarity.Rare, TargetType.Self)
     {
@@ -427,9 +424,6 @@ public sealed class Brutality_C : ClassicIroncladCard
 // STS1 Corruption: 3 energy (2 upgraded). Skills cost 0. Playing a Skill exhausts it.
 public sealed class Corruption_C : ClassicIroncladCard
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-        [HoverTipFactory.FromPower<CorruptionPower>()];
-
     public Corruption_C()
         : base("corruption", 3, CardType.Power, CardRarity.Rare, TargetType.Self)
     {
@@ -450,9 +444,6 @@ public sealed class Corruption_C : ClassicIroncladCard
 // STS1 Demon Form: 3 energy. At start of turn, gain 2 Strength (3 upgraded).
 public sealed class DemonForm_C : ClassicIroncladCard
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-        [HoverTipFactory.FromPower<DemonFormPower>()];
-
     protected override IEnumerable<DynamicVar> CanonicalVars =>
         [new DynamicVar("Strength", 2m)];
 

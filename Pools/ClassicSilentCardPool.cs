@@ -1,5 +1,8 @@
 using Godot;
+using System.Linq;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.CardPools;
 
 namespace ClassicModeMod;
 
@@ -17,8 +20,8 @@ public sealed class ClassicSilentCardPool : CardPoolModel
 
     protected override CardModel[] GenerateAllCards()
     {
-        return
-        [
+        var classicCards = new CardModel[]
+        {
             // ── Basic ──
             ModelDb.Card<StrikeSilent_C>(),
             ModelDb.Card<DefendSilent_C>(),
@@ -112,6 +115,12 @@ public sealed class ClassicSilentCardPool : CardPoolModel
             ModelDb.Card<Afterimage_C>(),
             ModelDb.Card<ToolsOfTheTrade_C>(),
             ModelDb.Card<WraithForm_C>(),
-        ];
+        };
+
+        return classicCards
+        .Concat(ModelDb.CardPool<SilentCardPool>().AllCards.Where(c => c.Rarity == CardRarity.Ancient))
+        .GroupBy(c => c.Id)
+        .Select(g => g.First())
+        .ToArray();
     }
 }

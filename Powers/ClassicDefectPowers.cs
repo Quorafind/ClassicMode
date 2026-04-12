@@ -163,13 +163,24 @@ public sealed class StaticDischargePower_C : PowerModel
 
     public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature target, DamageResult result, ValueProp props, Creature? dealer, CardModel? cardSource)
     {
-        if (target == base.Owner && result.UnblockedDamage > 0 && dealer != null)
+        if (target != base.Owner)
+            return;
+
+        // STS1 behavior: only direct enemy attack damage triggers this power.
+        // Non-attack HP loss (cards/powers) and 0 damage should not trigger.
+        if (result.UnblockedDamage <= 0)
+            return;
+        if (dealer == null || dealer == base.Owner || dealer.Side == base.Owner.Side)
+            return;
+        if (!props.HasFlag(ValueProp.Move))
+            return;
+        if (cardSource != null)
+            return;
+
+        Flash();
+        for (int i = 0; i < (int)base.Amount; i++)
         {
-            Flash();
-            for (int i = 0; i < (int)base.Amount; i++)
-            {
-                await OrbCmd.Channel<LightningOrb>(choiceContext, base.Owner.Player);
-            }
+            await OrbCmd.Channel<LightningOrb>(choiceContext, base.Owner.Player);
         }
     }
 }
@@ -221,18 +232,21 @@ public sealed class HelloWorldPower_C : PowerModel
             return;
 
         Flash();
-        CardModel card = CardFactory.GetDistinctForCombat(
-            base.Owner.Player,
-            from c in base.Owner.Player.Character.CardPool.GetUnlockedCards(
-                base.Owner.Player.UnlockState,
-                base.Owner.Player.RunState.CardMultiplayerConstraint)
-            where c.Rarity == CardRarity.Common
-            select c,
-            1,
-            base.Owner.Player.RunState.Rng.CombatCardGeneration).FirstOrDefault();
-        if (card != null)
+        for (int i = 0; i < (int)base.Amount; i++)
         {
-            await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Hand, addedByPlayer: true);
+            CardModel card = CardFactory.GetDistinctForCombat(
+                base.Owner.Player,
+                from c in base.Owner.Player.Character.CardPool.GetUnlockedCards(
+                    base.Owner.Player.UnlockState,
+                    base.Owner.Player.RunState.CardMultiplayerConstraint)
+                where c.Rarity == CardRarity.Common
+                select c,
+                1,
+                base.Owner.Player.RunState.Rng.CombatCardGeneration).FirstOrDefault();
+            if (card != null)
+            {
+                await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Hand, addedByPlayer: true);
+            }
         }
     }
 }
@@ -331,7 +345,9 @@ public sealed class HeatsinksPower_C : PowerModel
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
-        if (cardPlay.Card.Owner.Creature == base.Owner && cardPlay.Card.Type == CardType.Power)
+        if (cardPlay.Card.Owner.Creature == base.Owner
+            && cardPlay.Card.Type == CardType.Power
+            && cardPlay.Card is not Heatsinks_C)
         {
             Flash();
             await CardPileCmd.Draw(choiceContext, base.Amount, base.Owner.Player);

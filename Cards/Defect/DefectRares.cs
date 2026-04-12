@@ -331,9 +331,6 @@ public sealed class Recycle_C : ClassicDefectCard
 // STS1 Biased Cognition: 1 energy, gain 4 Focus (5 upgraded). Lose 1 Focus at end of each turn.
 public sealed class BiasedCognition_C : ClassicDefectCard
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-        [HoverTipFactory.FromPower<FocusPower>()];
-
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new PowerVar<FocusPower>(4m),
@@ -374,7 +371,7 @@ public sealed class CreativeAi_C : ClassicDefectCard
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         await CreatureCmd.TriggerAnim(Owner.Creature, "Cast", Owner.Character.CastAnimDelay);
-        await PowerCmd.Apply<CreativeAiPower_C>(Owner.Creature,
+        await PowerCmd.Apply<CreativeAiPower>(Owner.Creature,
             DynamicVars["CreativeAi"].BaseValue, Owner.Creature, this);
     }
 
@@ -400,7 +397,7 @@ public sealed class EchoForm_C : ClassicDefectCard
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         await CreatureCmd.TriggerAnim(Owner.Creature, "Cast", Owner.Character.CastAnimDelay);
-        await PowerCmd.Apply<EchoFormPower_C>(Owner.Creature,
+        await PowerCmd.Apply<EchoFormPower>(Owner.Creature,
             DynamicVars["EchoForm"].BaseValue, Owner.Creature, this);
     }
 
@@ -457,7 +454,7 @@ public sealed class MachineLearning_C : ClassicDefectCard
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         await CreatureCmd.TriggerAnim(Owner.Creature, "Cast", Owner.Character.CastAnimDelay);
-        await PowerCmd.Apply<MachineLearningPower_C>(Owner.Creature,
+        await PowerCmd.Apply<MachineLearningPower>(Owner.Creature,
             DynamicVars.Cards.BaseValue, Owner.Creature, this);
     }
 

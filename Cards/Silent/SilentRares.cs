@@ -352,7 +352,7 @@ public sealed class Malaise_C : ClassicSilentCard
         {
             return;
         }
-        await PowerCmd.Apply<MalaiseTempStrengthPower>(cardPlay.Target, amount, Owner.Creature, this);
+        await PowerCmd.Apply<StrengthPower>(cardPlay.Target, -amount, Owner.Creature, this);
         await PowerCmd.Apply<WeakPower>(cardPlay.Target, amount, Owner.Creature, this);
     }
 }
@@ -505,12 +505,6 @@ public sealed class ToolsOfTheTrade_C : ClassicSilentCard
 // ────────────────────────────────────────────────────────────────────────────
 public sealed class WraithForm_C : ClassicSilentCard
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-    [
-        HoverTipFactory.FromPower<IntangiblePower>(),
-        HoverTipFactory.FromPower<DexterityPower>()
-    ];
-
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new PowerVar<IntangiblePower>(2m),

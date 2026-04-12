@@ -58,6 +58,7 @@ internal static class HybridPoolCache
             ClearCardPool(ModelDb.CardPool<HybridIroncladCardPool>());
             ClearCardPool(ModelDb.CardPool<HybridSilentCardPool>());
             ClearCardPool(ModelDb.CardPool<HybridDefectCardPool>());
+            ClearCardPool(ModelDb.CardPool<MegaCrit.Sts2.Core.Models.CardPools.ColorlessCardPool>());
 
             // Hybrid relic pool instances
             ClearRelicPool(ModelDb.RelicPool<HybridIroncladRelicPool>());

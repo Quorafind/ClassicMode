@@ -107,10 +107,11 @@ public sealed class Dropkick_C : ClassicIroncladCard
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         ArgumentNullException.ThrowIfNull(cardPlay.Target);
+        bool hadVulnerable = cardPlay.Target.HasPower<VulnerablePower>();
         await DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this).Targeting(cardPlay.Target)
             .WithHitFx("vfx/vfx_attack_blunt", null, "blunt_attack.mp3")
             .Execute(choiceContext);
-        if (cardPlay.Target.HasPower<VulnerablePower>())
+        if (hadVulnerable)
         {
             await PlayerCmd.GainEnergy(1, Owner);
             await CardPileCmd.Draw(choiceContext, 1m, Owner);
@@ -132,7 +133,12 @@ public sealed class HeavyBlade_C : ClassicIroncladCard
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(14m, ValueProp.Move),
+        new CalculationBaseVar(14m),
+        new ExtraDamageVar(1m),
+        new CalculatedDamageVar(ValueProp.Move)
+            .WithMultiplier((CardModel card, Creature? _) =>
+                card.Owner.Creature.GetPowerAmount<StrengthPower>()
+                * (card.DynamicVars["StrengthMultiplier"].IntValue - 1)),
         new DynamicVar("StrengthMultiplier", 3m)
     ];
 
@@ -144,11 +150,7 @@ public sealed class HeavyBlade_C : ClassicIroncladCard
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         ArgumentNullException.ThrowIfNull(cardPlay.Target);
-        // Standard attack applies 1x strength; add extra (multiplier-1)x strength
-        decimal strength = Owner.Creature.GetPowerAmount<StrengthPower>();
-        int multiplier = DynamicVars["StrengthMultiplier"].IntValue;
-        decimal extraStrength = strength * (multiplier - 1);
-        await DamageCmd.Attack(DynamicVars.Damage.BaseValue + extraStrength).FromCard(this)
+        await DamageCmd.Attack(DynamicVars.CalculatedDamage).FromCard(this)
             .Targeting(cardPlay.Target)
             .WithHitFx("vfx/vfx_heavy_blunt", null, "heavy_attack.mp3")
             .Execute(choiceContext);
@@ -608,9 +610,6 @@ public sealed class FlameBarrier_C : ClassicIroncladCard
 
     public override bool GainsBlock => true;
 
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-        [HoverTipFactory.FromPower<FlameBarrierPower>()];
-
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new BlockVar(12m, ValueProp.Move),
@@ -964,12 +963,6 @@ public sealed class SpotWeakness_C : ClassicIroncladCard
 // STS1 Berserk: 0 energy, gain 2 Vulnerable to self (1 upgraded). At start of each turn, gain 1 energy.
 public sealed class Berserk_C : ClassicIroncladCard
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-    [
-        HoverTipFactory.FromPower<VulnerablePower>(),
-        EnergyHoverTip
-    ];
-
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new PowerVar<VulnerablePower>(2m),
@@ -1084,9 +1077,6 @@ public sealed class FireBreathing_C : ClassicIroncladCard
 // STS1 Inflame: 1 energy, gain 2 Strength (3 upgraded). COLLISION.
 public sealed class Inflame_C : ClassicIroncladCard
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-        [HoverTipFactory.FromPower<StrengthPower>()];
-
     protected override IEnumerable<DynamicVar> CanonicalVars =>
         [new PowerVar<StrengthPower>(2m)];
 
@@ -1109,9 +1099,6 @@ public sealed class Inflame_C : ClassicIroncladCard
 // STS1 Juggernaut: 2 energy, whenever you gain Block, deal 5 damage to random enemy (7 upgraded). COLLISION.
 public sealed class Juggernaut_C : ClassicIroncladCard
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-        [HoverTipFactory.FromPower<JuggernautPower>()];
-
     protected override IEnumerable<DynamicVar> CanonicalVars =>
         [new PowerVar<JuggernautPower>(5m)];
 
@@ -1156,9 +1143,6 @@ public sealed class Metallicize_C : ClassicIroncladCard
 // STS1 Rupture: 1 energy, whenever you lose HP from a card, gain 1 Strength (2 upgraded). COLLISION.
 public sealed class Rupture_C : ClassicIroncladCard
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-        [HoverTipFactory.FromPower<StrengthPower>()];
-
     protected override IEnumerable<DynamicVar> CanonicalVars =>
         [new PowerVar<StrengthPower>(1m)];
 
@@ -1169,7 +1153,7 @@ public sealed class Rupture_C : ClassicIroncladCard
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
-        await PowerCmd.Apply<RupturePower>(Owner.Creature, DynamicVars.Strength.BaseValue, Owner.Creature, this);
+        await PowerCmd.Apply<RupturePower_C>(Owner.Creature, DynamicVars.Strength.BaseValue, Owner.Creature, this);
     }
 
     protected override void OnUpgrade()

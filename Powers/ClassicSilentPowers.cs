@@ -17,13 +17,6 @@ namespace ClassicModeMod;
 // STS1 Silent-specific powers (classic implementations)
 // ═══════════════════════════════════════════════════════════════════
 
-public sealed class MalaiseTempStrengthPower : TemporaryStrengthPower
-{
-    public override AbstractModel OriginModel => ModelDb.Card<Malaise_C>();
-
-    protected override bool IsPositive => false;
-}
-
 /// <summary>
 /// Whenever you play a card, deal Amount damage to ALL enemies.
 /// STS1: A Thousand Cuts (1 base / 2 upgraded).
@@ -97,11 +90,13 @@ public sealed class CorpseExplosionPower : PowerModel
 
         Flash();
         decimal maxHp = target.MaxHp;
-        var enemies = base.CombatState.GetOpponentsOf(target)
+        // Corpse Explosion should hit the dead target's teammates (other enemies),
+        // not the opposing side.
+        var enemies = base.CombatState.GetTeammatesOf(target)
             .Where(c => c.IsAlive && c != target).ToList();
         if (enemies.Count > 0)
         {
-            await CreatureCmd.Damage(choiceContext, enemies, maxHp, ValueProp.Unpowered, target, null);
+            await CreatureCmd.Damage(choiceContext, enemies, maxHp, ValueProp.Unpowered, (Creature?)null, null);
         }
     }
 }

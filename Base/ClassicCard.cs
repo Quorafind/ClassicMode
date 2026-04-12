@@ -21,8 +21,7 @@ public abstract class ClassicIroncladCard : CardModel
         _portraitName = portraitName;
     }
 
-    // Return the original game pool so encyclopedia filters (c.Pool is IroncladCardPool) match.
-    // The actual pool swap for gameplay is handled by PoolSwitchPatches on Ironclad.CardPool getter.
+    // Keep class identity stable for UI coloring/filtering.
     public override CardPoolModel Pool => ModelDb.CardPool<IroncladCardPool>();
 
     public override string PortraitPath =>
@@ -86,6 +85,34 @@ public abstract class ClassicDefectCard : CardModel
 
     public override string BetaPortraitPath =>
         $"res://images/packed/card_portraits/classic/defect/beta/{_portraitName}.png";
+
+    public override IEnumerable<string> AllPortraitPaths => [PortraitPath, BetaPortraitPath];
+}
+
+/// <summary>Base card for Classic Colorless cards.</summary>
+public abstract class ClassicColorlessCard : CardModel
+{
+    private readonly string _portraitName;
+
+    protected ClassicColorlessCard(
+        string portraitName,
+        int canonicalEnergyCost,
+        CardType type,
+        CardRarity rarity,
+        TargetType targetType,
+        bool shouldShowInCardLibrary = true)
+        : base(canonicalEnergyCost, type, rarity, targetType, shouldShowInCardLibrary)
+    {
+        _portraitName = portraitName;
+    }
+
+    public override CardPoolModel Pool => ModelDb.CardPool<ColorlessCardPool>();
+
+    public override string PortraitPath =>
+        $"res://images/packed/card_portraits/classic/colorless/{_portraitName}.png";
+
+    public override string BetaPortraitPath =>
+        $"res://images/packed/card_portraits/classic/colorless/beta/{_portraitName}.png";
 
     public override IEnumerable<string> AllPortraitPaths => [PortraitPath, BetaPortraitPath];
 }

@@ -1,10 +1,18 @@
 {
-    "CLASSIC_CUSTOM_CARDS.title": "经典卡牌",
+    "CLASSIC_CUSTOM_CARDS.title": "经典角色卡牌",
     "CLASSIC_CUSTOM_CARDS.description": "当前角色使用《杀戮尖塔》一代卡池。",
     "CLASSIC_CUSTOM_RELICS.title": "经典遗物",
     "CLASSIC_CUSTOM_RELICS.description": "当前角色使用《杀戮尖塔》一代遗物池。",
-    "CLASSIC_CUSTOM_HYBRID.title": "混合模式",
+    "CLASSIC_CUSTOM_HYBRID.title": "混合角色卡牌",
     "CLASSIC_CUSTOM_HYBRID.description": "合并一代与二代卡牌/遗物池。与经典卡牌互斥。",
     "CLASSIC_CUSTOM_HYBRID_DEDUPE.title": "同名去重（留二代）",
-    "CLASSIC_CUSTOM_HYBRID_DEDUPE.description": "仅在混合模式下生效：同名内容只保留二代版本。"
+    "CLASSIC_CUSTOM_HYBRID_DEDUPE.description": "仅在混合模式下生效：同名内容只保留二代版本。",
+    "CLASSIC_CUSTOM_COLORLESS.title": "经典无色牌",
+    "CLASSIC_CUSTOM_COLORLESS.description": "无色牌池使用《杀戮尖塔》一代无色牌。",
+    "CLASSIC_CUSTOM_COLORLESS_HYBRID.title": "混合无色牌",
+    "CLASSIC_CUSTOM_COLORLESS_HYBRID.description": "合并一代与二代无色牌池。与经典无色牌互斥。",
+    "CLASSIC_CUSTOM_COLORLESS_DEDUPE.title": "无色同名去重",
+    "CLASSIC_CUSTOM_COLORLESS_DEDUPE.description": "仅在混合无色牌开启时生效：同名内容只保留二代版本。",
+    "CLASSIC_CUSTOM_COLORLESS_REWARDS.title": "无色卡牌奖励",
+    "CLASSIC_CUSTOM_COLORLESS_REWARDS.description": "战斗后的卡牌奖励中可出现无色牌。"
 }

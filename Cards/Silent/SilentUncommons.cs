@@ -1142,9 +1142,6 @@ public sealed class Accuracy_C : ClassicSilentCard
 // ────────────────────────────────────────────────────────────────────────────
 public sealed class Caltrops_C : ClassicSilentCard
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-        [HoverTipFactory.FromPower<ThornsPower>()];
-
     protected override IEnumerable<DynamicVar> CanonicalVars =>
         [new PowerVar<ThornsPower>(3m)];
 
@@ -1170,9 +1167,6 @@ public sealed class Caltrops_C : ClassicSilentCard
 // ────────────────────────────────────────────────────────────────────────────
 public sealed class Envenom_C : ClassicSilentCard
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-        [HoverTipFactory.FromPower<PoisonPower>()];
-
     protected override IEnumerable<DynamicVar> CanonicalVars =>
         [new PowerVar<EnvenomPower>(1m)];
 
@@ -1198,9 +1192,6 @@ public sealed class Envenom_C : ClassicSilentCard
 // ────────────────────────────────────────────────────────────────────────────
 public sealed class Footwork_C : ClassicSilentCard
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-        [HoverTipFactory.FromPower<DexterityPower>()];
-
     protected override IEnumerable<DynamicVar> CanonicalVars =>
         [new PowerVar<DexterityPower>(2m)];
 
@@ -1251,9 +1242,6 @@ public sealed class InfiniteBlades_C : ClassicSilentCard
 // ────────────────────────────────────────────────────────────────────────────
 public sealed class NoxiousFumes_C : ClassicSilentCard
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-        [HoverTipFactory.FromPower<PoisonPower>()];
-
     protected override IEnumerable<DynamicVar> CanonicalVars =>
         [new DynamicVar("PoisonPerTurn", 2m)];
 

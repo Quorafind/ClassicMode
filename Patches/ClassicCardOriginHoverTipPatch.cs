@@ -22,7 +22,7 @@ internal static class ClassicCardOriginHoverTipPatch
             if (!ClassicConfig.MarkClassicCardOrigin)
                 return;
 
-            if (__instance is not (ClassicIroncladCard or ClassicSilentCard or ClassicDefectCard))
+            if (__instance is not (ClassicIroncladCard or ClassicSilentCard or ClassicDefectCard or ClassicColorlessCard))
                 return;
 
             var descLoc = new LocString("cards", "CLASSIC_ORIGIN_HOVERTIP.description");

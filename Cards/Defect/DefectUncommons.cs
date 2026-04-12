@@ -1175,9 +1175,6 @@ public sealed class Capacitor_C : ClassicDefectCard
 // STS1 Defragment: 1 energy, gain 1 Focus (2 upgraded).
 public sealed class Defragment_C : ClassicDefectCard
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
-        [HoverTipFactory.FromPower<FocusPower>()];
-
     protected override IEnumerable<DynamicVar> CanonicalVars =>
         [new PowerVar<FocusPower>(1m)];
 
@@ -1234,7 +1231,7 @@ public sealed class HelloWorld_C : ClassicDefectCard
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         await CreatureCmd.TriggerAnim(Owner.Creature, "Cast", Owner.Character.CastAnimDelay);
-        await PowerCmd.Apply<HelloWorldPower_C>(Owner.Creature, 1m, Owner.Creature, this);
+        await PowerCmd.Apply<HelloWorldPower>(Owner.Creature, 1m, Owner.Creature, this);
     }
 
     protected override void OnUpgrade()
@@ -1260,7 +1257,7 @@ public sealed class Loop_C : ClassicDefectCard
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         await CreatureCmd.TriggerAnim(Owner.Creature, "Cast", Owner.Character.CastAnimDelay);
-        await PowerCmd.Apply<LoopPower_C>(Owner.Creature, DynamicVars["Loop"].BaseValue,
+        await PowerCmd.Apply<LoopPower>(Owner.Creature, DynamicVars["Loop"].BaseValue,
             Owner.Creature, this);
     }
 
@@ -1290,7 +1287,7 @@ public sealed class Storm_C : ClassicDefectCard
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         await CreatureCmd.TriggerAnim(Owner.Creature, "Cast", Owner.Character.CastAnimDelay);
-        await PowerCmd.Apply<StormPower_C>(Owner.Creature, DynamicVars["Storm"].BaseValue,
+        await PowerCmd.Apply<StormPower>(Owner.Creature, DynamicVars["Storm"].BaseValue,
             Owner.Creature, this);
     }
 

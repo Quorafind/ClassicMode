@@ -14,6 +14,10 @@ public static class ClassicConfig
     private static bool _classicRelics;
     private static bool _classicHybrid;
     private static bool _hybridDedupe;
+    private static bool _classicColorless;
+    private static bool _classicColorlessHybrid;
+    private static bool _classicColorlessDedupe;
+    private static bool _colorlessCardRewards;
     private static bool _markClassicCardOrigin;
 
     // Every pool-affecting toggle invalidates ModelDb's lazy `_allCards` /
@@ -77,6 +81,67 @@ public static class ClassicConfig
     }
 
     /// <summary>
+    /// When true, use STS1 classic colorless cards as the colorless pool.
+    /// </summary>
+    public static bool ClassicColorless
+    {
+        get => _classicColorless;
+        set
+        {
+            if (_classicColorless == value) return;
+            _classicColorless = value;
+            HybridPoolCache.InvalidateAll();
+            Save();
+        }
+    }
+
+    /// <summary>
+    /// When true, merge STS1 classic colorless cards into the base STS2 colorless pool.
+    /// Mutually exclusive with ClassicColorless.
+    /// </summary>
+    public static bool ClassicColorlessHybrid
+    {
+        get => _classicColorlessHybrid;
+        set
+        {
+            if (_classicColorlessHybrid == value) return;
+            _classicColorlessHybrid = value;
+            HybridPoolCache.InvalidateAll();
+            Save();
+        }
+    }
+
+    /// <summary>
+    /// When true (and ClassicColorlessHybrid is on), remove same-name duplicates so base STS2 cards win.
+    /// </summary>
+    public static bool ClassicColorlessDedupe
+    {
+        get => _classicColorlessDedupe;
+        set
+        {
+            if (_classicColorlessDedupe == value) return;
+            _classicColorlessDedupe = value;
+            HybridPoolCache.InvalidateAll();
+            Save();
+        }
+    }
+
+    /// <summary>
+    /// When true, card rewards may include colorless cards.
+    /// Shops are unaffected (they already have colorless slots).
+    /// </summary>
+    public static bool ColorlessCardRewards
+    {
+        get => _colorlessCardRewards;
+        set
+        {
+            if (_colorlessCardRewards == value) return;
+            _colorlessCardRewards = value;
+            Save();
+        }
+    }
+
+    /// <summary>
     /// When true, classic (STS1) cards show an origin hover tip to make
     /// them visually distinguishable in mixed pools.
     /// </summary>
@@ -105,9 +170,13 @@ public static class ClassicConfig
                     _classicRelics = data.ClassicRelics;
                     _classicHybrid = data.ClassicHybrid;
                     _hybridDedupe = data.HybridDedupe;
+                    _classicColorless = data.ClassicColorless;
+                    _classicColorlessHybrid = data.ClassicColorlessHybrid;
+                    _classicColorlessDedupe = data.ClassicColorlessDedupe;
+                    _colorlessCardRewards = data.ColorlessCardRewards;
                     _markClassicCardOrigin = data.MarkClassicCardOrigin;
                 }
-                Log.Info($"[ClassicMode] Config loaded: Cards={_classicCards}, Relics={_classicRelics}, Hybrid={_classicHybrid}, Dedupe={_hybridDedupe}, MarkSTS1={_markClassicCardOrigin}");
+                Log.Info($"[ClassicMode] Config loaded: Cards={_classicCards}, Relics={_classicRelics}, Hybrid={_classicHybrid}, Dedupe={_hybridDedupe}, ColorlessClassic={_classicColorless}, ColorlessHybrid={_classicColorlessHybrid}, ColorlessDedupe={_classicColorlessDedupe}, ColorlessRewards={_colorlessCardRewards}, MarkSTS1={_markClassicCardOrigin}");
             }
         }
         catch (Exception ex)
@@ -126,6 +195,10 @@ public static class ClassicConfig
                 ClassicRelics = _classicRelics,
                 ClassicHybrid = _classicHybrid,
                 HybridDedupe = _hybridDedupe,
+                ClassicColorless = _classicColorless,
+                ClassicColorlessHybrid = _classicColorlessHybrid,
+                ClassicColorlessDedupe = _classicColorlessDedupe,
+                ColorlessCardRewards = _colorlessCardRewards,
                 MarkClassicCardOrigin = _markClassicCardOrigin
             };
             File.WriteAllText(ConfigPath, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
@@ -142,6 +215,10 @@ public static class ClassicConfig
         public bool ClassicRelics { get; set; }
         public bool ClassicHybrid { get; set; }
         public bool HybridDedupe { get; set; }
+        public bool ClassicColorless { get; set; }
+        public bool ClassicColorlessHybrid { get; set; }
+        public bool ClassicColorlessDedupe { get; set; }
+        public bool ColorlessCardRewards { get; set; }
         public bool MarkClassicCardOrigin { get; set; }
     }
 }
