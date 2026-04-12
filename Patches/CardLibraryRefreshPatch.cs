@@ -120,26 +120,35 @@ internal static class CardLibraryRefreshPatch
 
         if (ironcladFilter != null)
         {
+            var previous = poolFilters.GetValueOrDefault(ironcladFilter);
             poolFilters[ironcladFilter] = c =>
-                c.Pool is IroncladCardPool or ClassicIroncladCardPool or HybridIroncladCardPool;
+                (previous?.Invoke(c) ?? false)
+                || c.Pool is IroncladCardPool or ClassicIroncladCardPool or HybridIroncladCardPool;
         }
 
         if (silentFilter != null)
         {
+            var previous = poolFilters.GetValueOrDefault(silentFilter);
             poolFilters[silentFilter] = c =>
-                c.Pool is SilentCardPool or ClassicSilentCardPool or HybridSilentCardPool;
+                (previous?.Invoke(c) ?? false)
+                || c.Pool is SilentCardPool or ClassicSilentCardPool or HybridSilentCardPool;
         }
 
         if (defectFilter != null)
         {
+            var previous = poolFilters.GetValueOrDefault(defectFilter);
             poolFilters[defectFilter] = c =>
-                c.Pool is DefectCardPool or ClassicDefectCardPool or HybridDefectCardPool;
+                (previous?.Invoke(c) ?? false)
+                || c.Pool is DefectCardPool or ClassicDefectCardPool or HybridDefectCardPool;
         }
 
         if (colorlessFilter != null)
         {
+            var previous = poolFilters.GetValueOrDefault(colorlessFilter);
             poolFilters[colorlessFilter] = c =>
-                c.Pool is ColorlessCardPool && !ShouldHideUltimateFromColorlessTab(c);
+                ((previous?.Invoke(c) ?? false)
+                 || c.Pool is ColorlessCardPool)
+                && !ShouldHideUltimateFromColorlessTab(c);
         }
     }
 

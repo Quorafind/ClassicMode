@@ -92,8 +92,12 @@ internal static class PowerIconDirectPatch
     {
         if (PowerIconPathHelper.TryGetCustomPowerIconPath(__instance, out var path))
         {
-            __result = ResourceLoader.Load<Texture2D>(path, null, ResourceLoader.CacheMode.Reuse);
-            return false;
+            var icon = ResourceLoader.Load<Texture2D>(path, null, ResourceLoader.CacheMode.Reuse);
+            if (icon != null)
+            {
+                __result = icon;
+                return false;
+            }
         }
 
         return true;
