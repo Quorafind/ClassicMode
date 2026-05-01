@@ -189,7 +189,7 @@ public sealed class EndlessAgony_C : ClassicSilentCard
         // When THIS card is drawn, add a copy to your hand
         if (card != this) return;
         var copy = CreateClone();
-        await CardPileCmd.AddGeneratedCardToCombat(copy, PileType.Hand, addedByPlayer: true);
+        await CardPileCmd.AddGeneratedCardToCombat(copy, PileType.Hand, Owner);
     }
 
     protected override void OnUpgrade()
@@ -809,7 +809,7 @@ public sealed class Distraction_C : ClassicSilentCard
         if (card != null)
         {
             card.SetToFreeThisTurn();
-            await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Hand, addedByPlayer: true);
+            await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Hand, Owner);
         }
     }
 

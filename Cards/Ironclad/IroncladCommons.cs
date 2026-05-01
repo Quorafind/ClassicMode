@@ -44,7 +44,7 @@ public sealed class Anger_C : ClassicIroncladCard
             .Execute(choiceContext);
         CardModel card = CreateClone();
         CardCmd.PreviewCardPileAdd(
-            await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Discard, addedByPlayer: true), 2.2f);
+            await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Discard, Owner), 2.2f);
     }
 
     protected override void OnUpgrade()
@@ -699,7 +699,7 @@ public sealed class WildStrike_C : ClassicIroncladCard
         await CardPileCmd.AddGeneratedCardToCombat(
             CombatState.CreateCard<MegaCrit.Sts2.Core.Models.Cards.Wound>(Owner),
             PileType.Draw,
-            addedByPlayer: true,
+            Owner,
             CardPilePosition.Random);
     }
 

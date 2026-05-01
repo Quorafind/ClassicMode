@@ -149,7 +149,7 @@ public sealed class Immolate_C : ClassicIroncladCard
             .Execute(choiceContext);
 
         CardModel burn = CombatState.CreateCard<Burn>(Owner);
-        await CardPileCmd.AddGeneratedCardToCombat(burn, PileType.Discard, addedByPlayer: true);
+        await CardPileCmd.AddGeneratedCardToCombat(burn, PileType.Discard, Owner);
     }
 
     protected override void OnUpgrade()

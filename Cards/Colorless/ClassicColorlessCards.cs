@@ -127,7 +127,7 @@ public sealed class Discovery_C : ClassicColorlessCard
             return;
 
         chosen.EnergyCost.SetThisTurnOrUntilPlayed(0);
-        await CardPileCmd.AddGeneratedCardToCombat(chosen, PileType.Hand, addedByPlayer: true);
+        await CardPileCmd.AddGeneratedCardToCombat(chosen, PileType.Hand, Owner);
     }
 
     protected override void OnUpgrade()
@@ -329,7 +329,7 @@ public sealed class JackOfAllTrades_C : ClassicColorlessCard
         {
             var card = rng.NextItem(pool);
             if (card == null) continue;
-            await CardPileCmd.AddGeneratedCardToCombat(card.CreateClone(), PileType.Hand, addedByPlayer: true);
+            await CardPileCmd.AddGeneratedCardToCombat(card.CreateClone(), PileType.Hand, Owner);
         }
     }
 
@@ -642,7 +642,7 @@ public sealed class Chrysalis_C : ClassicColorlessCard
         {
             card.SetToFreeThisCombat();
             CardCmd.PreviewCardPileAdd(
-                await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Draw, addedByPlayer: true, CardPilePosition.Random));
+                await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Draw, Owner, CardPilePosition.Random));
         }
     }
 
@@ -670,7 +670,7 @@ public sealed class Metamorphosis_C : ClassicColorlessCard
         {
             card.SetToFreeThisCombat();
             CardCmd.PreviewCardPileAdd(
-                await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Draw, addedByPlayer: true, CardPilePosition.Random));
+                await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Draw, Owner, CardPilePosition.Random));
         }
     }
 
@@ -733,7 +733,7 @@ public sealed class Transmutation_C : ClassicColorlessCard
             if (IsUpgraded)
                 CardCmd.Upgrade(generated);
             generated.SetToFreeThisTurn();
-            await CardPileCmd.AddGeneratedCardToCombat(generated, PileType.Hand, addedByPlayer: true);
+            await CardPileCmd.AddGeneratedCardToCombat(generated, PileType.Hand, Owner);
         }
     }
 }

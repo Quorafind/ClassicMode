@@ -1063,69 +1063,85 @@ _CUSTOM_RELIC_LOC = {
     "eng": {
         "MarkOfPain": {
             "NAME": "Mark of Pain",
-            "DESCRIPTION": "Gain {energyPrefix:energyIcons(1)} at the start of your turn. At the start of combat, shuffle 2 Wounds into your draw pile."
+            "DESCRIPTION": "Gain {energyPrefix:energyIcons(1)} at the start of your turn. At the start of combat, shuffle 2 Wounds into your draw pile.",
+            "FLAVOR": ""
         },
         "ChampionBelt": {
             "NAME": "Champion Belt",
-            "DESCRIPTION": "Whenever you apply Vulnerable, apply {WeakAmount} Weak."
+            "DESCRIPTION": "Whenever you apply Vulnerable, apply {WeakAmount} Weak.",
+            "FLAVOR": ""
         },
         "WristBlade": {
             "NAME": "Wrist Blade",
-            "DESCRIPTION": "Attacks that cost 0 deal {ExtraDamage} additional damage."
+            "DESCRIPTION": "Attacks that cost 0 deal {ExtraDamage} additional damage.",
+            "FLAVOR": ""
         },
         "HoveringKite": {
             "NAME": "Hovering Kite",
-            "DESCRIPTION": "The first time you discard a card each turn, gain {energyPrefix:energyIcons(1)}."
+            "DESCRIPTION": "The first time you discard a card each turn, gain {energyPrefix:energyIcons(1)}.",
+            "FLAVOR": ""
         },
         "TheSpecimen": {
             "NAME": "The Specimen",
-            "DESCRIPTION": "Whenever an enemy dies, transfer any Poison it has to a random enemy."
+            "DESCRIPTION": "Whenever an enemy dies, transfer any Poison it has to a random enemy.",
+            "FLAVOR": ""
         },
         "FrozenCore": {
             "NAME": "Frozen Core",
-            "DESCRIPTION": "If you end your turn with any empty Orb slots, Channel 1 Frost."
+            "DESCRIPTION": "If you end your turn with any empty Orb slots, Channel 1 Frost.",
+            "FLAVOR": ""
         },
         "Inserter": {
             "NAME": "Inserter",
-            "DESCRIPTION": "Every 2 turns, gain 1 Orb slot."
+            "DESCRIPTION": "Every 2 turns, gain 1 Orb slot.",
+            "FLAVOR": ""
         },
         "NuclearBattery": {
             "NAME": "Nuclear Battery",
-            "DESCRIPTION": "At the start of each combat, Channel 1 Plasma."
+            "DESCRIPTION": "At the start of each combat, Channel 1 Plasma.",
+            "FLAVOR": ""
         },
     },
     "zhs": {
         "MarkOfPain": {
-            "NAME": "\u82e6\u75db\u4e4b\u5370",
-            "DESCRIPTION": "\u56de\u5408\u5f00\u59cb\u65f6\u83b7\u5f97 {energyPrefix:energyIcons(1)}\u3002\u6218\u6597\u5f00\u59cb\u65f6\uff0c\u5c06 2 \u5f20\u4f24\u53e3\u6d17\u5165\u4f60\u7684\u62bd\u724c\u5806\u3002"
+            "NAME": "\u75db\u695a\u5370\u8bb0",
+            "DESCRIPTION": "\u6bcf\u56de\u5408\u5f00\u59cb\u83b7\u5f97{energyPrefix:energyIcons(1)}\u3002\u5728\u6218\u6597\u5f00\u59cb\u65f6\uff0c\u5c06 2 \u5f20[gold]\u4f24\u53e3[/gold]\u653e\u5165\u4f60\u7684\u62bd\u724c\u5806\u3002",
+            "FLAVOR": ""
         },
         "ChampionBelt": {
             "NAME": "\u51a0\u519b\u8170\u5e26",
-            "DESCRIPTION": "\u6bcf\u5f53\u4f60\u65bd\u52a0\u6613\u4f24\u65f6\uff0c\u65bd\u52a0 {WeakAmount} \u5c42\u865a\u5f31\u3002"
+            "DESCRIPTION": "\u6bcf\u5f53\u4f60\u7ed9\u4e88[gold]\u6613\u4f24[/gold]\u65f6\uff0c\u540c\u65f6\u7ed9\u4e88 {WeakAmount} \u5c42[gold]\u865a\u5f31[/gold]\u3002",
+            "FLAVOR": ""
         },
         "WristBlade": {
-            "NAME": "\u8155\u5203",
-            "DESCRIPTION": "0 \u8017\u80fd\u7684\u653b\u51fb\u9020\u6210\u989d\u5916 {ExtraDamage} \u70b9\u4f24\u5bb3\u3002"
+            "NAME": "\u8896\u5251",
+            "DESCRIPTION": "\u8d39\u7528\u4e3a0\u7684[gold]\u653b\u51fb[/gold]\u724c\u989d\u5916\u9020\u6210 {ExtraDamage} \u70b9\u4f24\u5bb3\u3002",
+            "FLAVOR": ""
         },
         "HoveringKite": {
             "NAME": "\u60ac\u6d6e\u98ce\u7b5d",
-            "DESCRIPTION": "\u6bcf\u56de\u5408\u7b2c\u4e00\u6b21\u4e22\u5f03\u724c\u65f6\uff0c\u83b7\u5f97 {energyPrefix:energyIcons(1)}\u3002"
+            "DESCRIPTION": "\u4f60\u5728\u6bcf\u56de\u5408\u7b2c\u4e00\u6b21\u5f03\u724c\u65f6\uff0c\u83b7\u5f97{energyPrefix:energyIcons(1)}\u3002",
+            "FLAVOR": ""
         },
         "TheSpecimen": {
-            "NAME": "\u6807\u672c",
-            "DESCRIPTION": "\u6bcf\u5f53\u4e00\u4e2a\u654c\u4eba\u6b7b\u4ea1\u65f6\uff0c\u5c06\u5176\u4e2d\u6bd2\u8f6c\u79fb\u7ed9\u968f\u673a\u654c\u4eba\u3002"
+            "NAME": "\u751f\u7269\u6837\u672c",
+            "DESCRIPTION": "\u6bcf\u5f53\u6709\u654c\u4eba\u6b7b\u53bb\u65f6\uff0c\u5c06\u5176\u8eab\u4e0a\u7684[gold]\u4e2d\u6bd2[/gold]\u5c42\u6570\u79fb\u5230\u4e00\u540d\u968f\u673a\u654c\u4eba\u8eab\u4e0a\u3002",
+            "FLAVOR": ""
         },
         "FrozenCore": {
-            "NAME": "\u51b0\u5c01\u6838\u5fc3",
-            "DESCRIPTION": "\u5982\u679c\u4f60\u56de\u5408\u7ed3\u675f\u65f6\u6709\u7a7a\u7684\u5145\u80fd\u7403\u69fd\uff0c\u5f15\u5bfc 1 \u4e2a\u5bd2\u971c\u3002"
+            "NAME": "\u51bb\u7ed3\u6838\u5fc3",
+            "DESCRIPTION": "\u66ff\u6362[gold]\u7834\u635f\u6838\u5fc3[/gold]\u3002\u5982\u679c\u4f60\u5728\u4f60\u7684\u56de\u5408\u7ed3\u675f\u65f6\u8fd8\u6709\u7a7a\u4f59\u7684[gold]\u5145\u80fd\u7403[/gold]\u680f\u4f4d\uff0c[gold]\u751f\u6210[/gold] 1 \u4e2a[gold]\u51b0\u971c[/gold][gold]\u5145\u80fd\u7403[/gold]\u3002",
+            "FLAVOR": ""
         },
         "Inserter": {
-            "NAME": "\u63d2\u5165\u5668",
-            "DESCRIPTION": "\u6bcf 2 \u56de\u5408\uff0c\u83b7\u5f97 1 \u4e2a\u5145\u80fd\u7403\u69fd\u3002"
+            "NAME": "\u673a\u68b0\u81c2",
+            "DESCRIPTION": "\u6bcf 2 \u56de\u5408\uff0c\u83b7\u5f97 1 \u4e2a[gold]\u5145\u80fd\u7403[/gold]\u680f\u4f4d\u3002",
+            "FLAVOR": ""
         },
         "NuclearBattery": {
-            "NAME": "\u6838\u7535\u6c60",
-            "DESCRIPTION": "\u6bcf\u573a\u6218\u6597\u5f00\u59cb\u65f6\uff0c\u5f15\u5bfc 1 \u4e2a\u7b49\u79bb\u5b50\u3002"
+            "NAME": "\u6838\u80fd\u7535\u6c60",
+            "DESCRIPTION": "\u5728\u6bcf\u573a\u6218\u6597\u5f00\u59cb\u65f6\uff0c[gold]\u751f\u6210[/gold] 1 \u4e2a[gold]\u7b49\u79bb\u5b50[/gold][gold]\u5145\u80fd\u7403[/gold]\u3002",
+            "FLAVOR": ""
         },
     },
 }
@@ -1557,6 +1573,7 @@ def generate_localization(sts1_root, project_dir):
                 slug = _slugify(class_name)
                 relic_loc[f"{slug}.title"] = entry["NAME"]
                 relic_loc[f"{slug}.description"] = entry["DESCRIPTION"]
+                relic_loc[f"{slug}.flavor"] = entry.get("FLAVOR", "")
             relic_loc_by_lang[lang] = relic_loc
 
         # --- Powers ---

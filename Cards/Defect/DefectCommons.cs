@@ -551,7 +551,7 @@ public sealed class Turbo_C : ClassicDefectCard
         ArgumentNullException.ThrowIfNull(CombatState);
         CardModel voidCard = CombatState.CreateCard<MegaCrit.Sts2.Core.Models.Cards.Void>(Owner);
         CardCmd.PreviewCardPileAdd(
-            await CardPileCmd.AddGeneratedCardToCombat(voidCard, PileType.Discard, addedByPlayer: true));
+            await CardPileCmd.AddGeneratedCardToCombat(voidCard, PileType.Discard, Owner));
         await Cmd.Wait(0.5f);
     }
 

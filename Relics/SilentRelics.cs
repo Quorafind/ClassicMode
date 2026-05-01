@@ -68,7 +68,7 @@ public sealed class HoveringKite : ClassicRelic
         set { AssertMutable(); _triggeredThisTurn = value; }
     }
 
-    public override Task BeforeSideTurnStart(PlayerChoiceContext choiceContext, CombatSide side, CombatState combatState)
+    public override Task BeforeSideTurnStart(PlayerChoiceContext choiceContext, CombatSide side, ICombatState combatState)
     {
         if (side == Owner.Creature.Side)
             TriggeredThisTurn = false;
@@ -116,6 +116,6 @@ public sealed class TheSpecimen : ClassicRelic
 
         Flash();
         Creature transferTarget = Owner.RunState.Rng.CombatTargets.NextItem(aliveEnemies);
-        await PowerCmd.Apply<PoisonPower>(transferTarget, poisonPower.Amount, Owner.Creature, null);
+        await PowerCmd.Apply<PoisonPower>(choiceContext, transferTarget, poisonPower.Amount, Owner.Creature, null);
     }
 }

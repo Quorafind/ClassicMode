@@ -119,7 +119,7 @@ public sealed class BrutalityPower_C : PowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override async Task AfterSideTurnStart(CombatSide side, CombatState combatState)
+    public override async Task AfterSideTurnStart(CombatSide side, ICombatState combatState)
     {
         if (side != base.Owner.Side)
             return;
@@ -152,6 +152,6 @@ public sealed class RupturePower_C : PowerModel
             return;
 
         Flash();
-        await PowerCmd.Apply<StrengthPower>(base.Owner, base.Amount, base.Owner, null);
+        await PowerCmd.Apply<StrengthPower>(choiceContext, base.Owner, base.Amount, base.Owner, null);
     }
 }

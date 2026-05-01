@@ -874,7 +874,7 @@ public sealed class Overclock_C : ClassicDefectCard
         ArgumentNullException.ThrowIfNull(CombatState);
         CardModel burn = CombatState.CreateCard<Burn>(Owner);
         CardCmd.PreviewCardPileAdd(
-            await CardPileCmd.AddGeneratedCardToCombat(burn, PileType.Discard, addedByPlayer: true));
+            await CardPileCmd.AddGeneratedCardToCombat(burn, PileType.Discard, Owner));
         await Cmd.Wait(0.5f);
     }
 
@@ -1111,7 +1111,7 @@ public sealed class WhiteNoise_C : ClassicDefectCard
         if (card != null)
         {
             card.SetToFreeThisTurn();
-            await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Hand, addedByPlayer: true);
+            await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Hand, Owner);
         }
     }
 

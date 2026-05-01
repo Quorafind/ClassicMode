@@ -70,7 +70,7 @@ public sealed class Inserter : ClassicRelic
         set { AssertMutable(); _turnsElapsed = value; }
     }
 
-    public override async Task AfterSideTurnStart(CombatSide side, CombatState combatState)
+    public override async Task AfterSideTurnStart(CombatSide side, ICombatState combatState)
     {
         if (side != Owner.Creature.Side) return;
 
@@ -84,7 +84,7 @@ public sealed class Inserter : ClassicRelic
         InvokeDisplayAmountChanged();
     }
 
-    public override Task BeforeSideTurnStart(PlayerChoiceContext choiceContext, CombatSide side, CombatState combatState)
+    public override Task BeforeSideTurnStart(PlayerChoiceContext choiceContext, CombatSide side, ICombatState combatState)
     {
         if (side == Owner.Creature.Side && combatState.RoundNumber <= 1)
             TurnsElapsed = 0;
@@ -107,7 +107,7 @@ public sealed class NuclearBattery : ClassicRelic
         HoverTipFactory.FromOrb<PlasmaOrb>()
     ];
 
-    public override async Task BeforeSideTurnStart(PlayerChoiceContext choiceContext, CombatSide side, CombatState combatState)
+    public override async Task BeforeSideTurnStart(PlayerChoiceContext choiceContext, CombatSide side, ICombatState combatState)
     {
         if (side == Owner.Creature.Side && combatState.RoundNumber <= 1)
         {

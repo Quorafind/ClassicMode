@@ -131,25 +131,55 @@ public sealed class ElectrodynamicsPower_C : PowerModel
 {
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
+}
 
-    public override async Task AfterOrbEvoked(PlayerChoiceContext choiceContext, OrbModel orb, IEnumerable<Creature> targets)
+[HarmonyPatch(typeof(LightningOrb), "ApplyLightningDamage")]
+internal static class ElectrodynamicsLightningPatch
+{
+    static void Postfix(
+        LightningOrb __instance,
+        decimal value,
+        Creature? target,
+        PlayerChoiceContext choiceContext,
+        ref Task<IEnumerable<Creature>> __result)
     {
-        if (orb is not LightningOrb lightning) return;
-        if (orb.Owner?.Creature != base.Owner) return;
+        __result = Wrap(__instance, value, choiceContext, __result);
+    }
 
-        var hitTargets = targets.ToHashSet();
-        var remaining = base.CombatState.GetOpponentsOf(base.Owner)
-            .Where(c => c.IsHittable && !hitTargets.Contains(c)).ToList();
+    private static async Task<IEnumerable<Creature>> Wrap(
+        LightningOrb orb,
+        decimal damageValue,
+        PlayerChoiceContext choiceContext,
+        Task<IEnumerable<Creature>> originalTask)
+    {
+        var hitTargets = (await originalTask)?.ToHashSet() ?? [];
 
-        if (remaining.Count > 0)
+        var ownerCreature = orb.Owner?.Creature;
+        if (ownerCreature == null)
+            return hitTargets;
+
+        var electrodynamics = ownerCreature.GetPower<ElectrodynamicsPower_C>();
+        if (electrodynamics == null)
+            return hitTargets;
+
+        var remaining = orb.CombatState
+            .GetOpponentsOf(ownerCreature)
+            .Where(c => c.IsHittable && !hitTargets.Contains(c))
+            .ToList();
+
+        if (remaining.Count == 0)
+            return hitTargets;
+
+        foreach (var enemy in remaining)
         {
-            Flash();
-            foreach (Creature enemy in remaining)
-            {
-                VfxCmd.PlayOnCreature(enemy, "vfx/vfx_attack_lightning");
-            }
-            await CreatureCmd.Damage(choiceContext, remaining, lightning.EvokeVal, ValueProp.Unpowered, base.Owner, null);
+            VfxCmd.PlayOnCreature(enemy, "vfx/vfx_attack_lightning");
         }
+
+        await CreatureCmd.Damage(choiceContext, remaining, damageValue, ValueProp.Unpowered, ownerCreature, null);
+        foreach (var enemy in remaining)
+            hitTargets.Add(enemy);
+
+        return hitTargets;
     }
 }
 
@@ -166,15 +196,12 @@ public sealed class StaticDischargePower_C : PowerModel
         if (target != base.Owner)
             return;
 
-        // STS1 behavior: only direct enemy attack damage triggers this power.
-        // Non-attack HP loss (cards/powers) and 0 damage should not trigger.
+        // Match the powered-attack damage pattern (see TheGambitPower/FlameBarrierPower).
         if (result.UnblockedDamage <= 0)
             return;
-        if (dealer == null || dealer == base.Owner || dealer.Side == base.Owner.Side)
+        if (dealer == null || dealer.Side == base.Owner.Side)
             return;
-        if (!props.HasFlag(ValueProp.Move))
-            return;
-        if (cardSource != null)
+        if (!props.IsPoweredAttack())
             return;
 
         Flash();
@@ -193,7 +220,7 @@ public sealed class CreativeAiPower_C : PowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override async Task AfterSideTurnStart(CombatSide side, CombatState combatState)
+    public override async Task AfterSideTurnStart(CombatSide side, ICombatState combatState)
     {
         if (side != base.Owner.Side)
             return;
@@ -212,7 +239,7 @@ public sealed class CreativeAiPower_C : PowerModel
                 base.Owner.Player.RunState.Rng.CombatCardGeneration).FirstOrDefault();
             if (card != null)
             {
-                await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Hand, addedByPlayer: true);
+                await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Hand, base.Owner.Player);
             }
         }
     }
@@ -226,7 +253,7 @@ public sealed class HelloWorldPower_C : PowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override async Task AfterSideTurnStart(CombatSide side, CombatState combatState)
+    public override async Task AfterSideTurnStart(CombatSide side, ICombatState combatState)
     {
         if (side != base.Owner.Side)
             return;
@@ -245,7 +272,7 @@ public sealed class HelloWorldPower_C : PowerModel
                 base.Owner.Player.RunState.Rng.CombatCardGeneration).FirstOrDefault();
             if (card != null)
             {
-                await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Hand, addedByPlayer: true);
+                await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Hand, base.Owner.Player);
             }
         }
     }
@@ -280,7 +307,7 @@ public sealed class MachineLearningPower_C : PowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override async Task AfterSideTurnStart(CombatSide side, CombatState combatState)
+    public override async Task AfterSideTurnStart(CombatSide side, ICombatState combatState)
     {
         if (side != base.Owner.Side)
             return;
@@ -317,7 +344,7 @@ public sealed class LoopPower_C : PowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override async Task AfterSideTurnStart(CombatSide side, CombatState combatState)
+    public override async Task AfterSideTurnStart(CombatSide side, ICombatState combatState)
     {
         if (side != base.Owner.Side)
             return;
@@ -406,7 +433,7 @@ public sealed class EchoFormPower_C : PowerModel
         set { AssertMutable(); _doublesRemaining = value; }
     }
 
-    public override Task AfterSideTurnStart(CombatSide side, CombatState combatState)
+    public override Task AfterSideTurnStart(CombatSide side, ICombatState combatState)
     {
         if (side == base.Owner.Side)
         {

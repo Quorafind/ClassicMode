@@ -1,4 +1,5 @@
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Runs;
 
 namespace ClassicModeMod;
 
@@ -10,5 +11,8 @@ public abstract class ClassicRelic(string assetName) : RelicModel
     protected override string PackedIconOutlinePath =>
         $"res://images/relics/classic/outline/{assetName}.png";
 
-    protected override string BigIconPath => PackedIconPath;
+    public override bool IsAllowed(IRunState runState)
+    {
+        return ClassicConfig.ClassicRelics || ClassicConfig.ClassicHybrid;
+    }
 }
