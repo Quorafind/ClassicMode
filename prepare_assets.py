@@ -21,6 +21,7 @@ import re
 import shutil
 import struct
 import sys
+import difflib
 
 # ---------------------------------------------------------------------------
 # Godot .ctex / .import generation (same approach as Watcher's prepare_assets.py)
@@ -125,6 +126,8 @@ _CARD_TYPE_TO_PORTRAIT_SUBDIR = {
 
 _PORTRAIT_SOURCE_BASENAME_OVERRIDES = {
     ("defect", "compiled_driver"): "compile_driver",
+    # FanOfKnives_C maps from STS1 "Die Die Die" in this project setup.
+    ("silent", "fan_of_knives"): "die_die_die",
 }
 
 # STS1 power icon import map:
@@ -786,18 +789,6 @@ _CUSTOM_CARD_LOC = {
             "NAME": "Fan of Knives",
             "DESCRIPTION": "Deal {Damage:diff()} damage to ALL enemies.\nDraw {Cards:diff()} card."
         },
-        "Adrenaline_C": {
-            "NAME": "Adrenaline",
-            "DESCRIPTION": "Gain {Energy:energyIcons()}.\nDraw 2 cards."
-        },
-        "Storm_C": {
-            "NAME": "Storm",
-            "DESCRIPTION": "Whenever you play a Power card, Channel {Storm:diff()} Lightning."
-        },
-        "Loop_C": {
-            "NAME": "Loop",
-            "DESCRIPTION": "At the start of your turn, trigger the passive ability of your next [gold]Orb[/gold] {Loop:diff()} times."
-        },
         "UltimateStrikeEvent_C": {
             "NAME": "Ultimate Strike",
             "DESCRIPTION": "Deal {Damage:diff()} damage."
@@ -815,18 +806,6 @@ _CUSTOM_CARD_LOC = {
         "FanOfKnives_C": {
             "NAME": "万刃齐发",
             "DESCRIPTION": "对所有敌人造成{Damage:diff()}点伤害。\n抽{Cards:diff()}张牌。"
-        },
-        "Adrenaline_C": {
-            "NAME": "肾上腺素",
-            "DESCRIPTION": "获得{Energy:energyIcons()}。\n抽2张牌。"
-        },
-        "Storm_C": {
-            "NAME": "雷暴",
-            "DESCRIPTION": "你每打出一张能力牌，生成{Storm:diff()}个闪电[gold]充能球[/gold]。"
-        },
-        "Loop_C": {
-            "NAME": "循环",
-            "DESCRIPTION": "在你的回合开始时，使用你最右侧的1个[gold]充能球[/gold]的被动能力{Loop:diff()}次。"
         },
         "UltimateStrikeEvent_C": {
             "NAME": "究极打击",
@@ -1779,9 +1758,124 @@ def _inject_x_plus_one_if_upgraded(desc: str) -> str:
         return ""
     return re.sub(r'(?<![A-Za-z0-9])X(?![A-Za-z0-9])', 'X{IfUpgraded:show:+1|}', desc)
 
+def _is_valid_upgrade_description(text: str) -> bool:
+    if not text:
+        return False
+    normalized = text.strip().lower()
+    if not normalized:
+        return False
+    if normalized in {"deprecated", "depreciated", '""'}:
+        return False
+    return True
+
+
+def _merge_upgrade_branch_into_description(base_desc: str, upgraded_desc: str) -> str:
+    """Embed upgrade branch into description using minimal IfUpgraded fragments."""
+    if not base_desc or not upgraded_desc:
+        return base_desc
+    if base_desc == upgraded_desc:
+        return base_desc
+    if "IfUpgraded:" in base_desc:
+        return base_desc
+    if "|" in base_desc or "|" in upgraded_desc:
+        return base_desc
+
+    # Tokenize placeholders as atomic units so we don't split SmartFormat syntax.
+    token_re = re.compile(r"\{[^{}]*\}|\n|\s+|[^\s]")
+    base_tokens = token_re.findall(base_desc)
+    up_tokens = token_re.findall(upgraded_desc)
+    sm = difflib.SequenceMatcher(a=base_tokens, b=up_tokens)
+
+    merged: list[str] = []
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == "equal":
+            merged.extend(base_tokens[i1:i2])
+            continue
+
+        base_seg = "".join(base_tokens[i1:i2])
+        up_seg = "".join(up_tokens[j1:j2])
+        if "|" in base_seg or "|" in up_seg:
+            return base_desc
+        merged.append(f"{{IfUpgraded:show:{up_seg}|{base_seg}}}")
+
+    return "".join(merged)
+
 
 def _apply_card_specific_desc_fixes(cls_name: str, lang: str, desc: str) -> str:
     """Fix known placeholder mismatches between STS1 text and ClassicMode DynamicVars."""
+    # STS2 card UI reads only `<ID>.description` and uses IfUpgraded at render time.
+    # Armaments must embed upgrade branch directly in description; a standalone
+    # `.upgradedDescription` key is ignored by the runtime card renderer.
+    if cls_name == "Armaments_C":
+        if lang == "zhs":
+            return "获得{Block:diff()}点[gold]格挡[/gold]。\n[gold]升级[/gold]你[gold]手牌[/gold]中的{IfUpgraded:show:所有牌|一张牌}。"
+        return "Gain {Block:diff()} [gold]Block[/gold].\n[gold]Upgrade[/gold] {IfUpgraded:show:ALL cards|a card} in your [gold]Hand[/gold]."
+
+    if cls_name == "Bloodletting_C":
+        if lang == "zhs":
+            return "失去3点生命。\n获得{IfUpgraded:show:{energyPrefix:energyIcons(3)}|{energyPrefix:energyIcons(2)}}。"
+        return "Lose 3 HP.\nGain {IfUpgraded:show:{energyPrefix:energyIcons(3)}|{energyPrefix:energyIcons(2)}}."
+
+    if cls_name == "Envenom_C":
+        if lang == "zhs":
+            return "每有一次[gold]攻击[/gold]造成未被[gold]格挡[/gold]的伤害，就给予{EnvenomPower:diff()}层[gold]中毒[/gold]。"
+        return "Whenever an [gold]Attack[/gold] deals unblocked damage, apply {EnvenomPower:diff()} [gold]Poison[/gold]."
+
+    if cls_name == "Forethought_C":
+        if lang == "zhs":
+            return "将手牌中的{IfUpgraded:show:任意张牌|一张牌}放到抽牌堆的底部。\n并且{IfUpgraded:show:它们|这张牌}在被打出之前，耗能变为0。"
+        return "Put {IfUpgraded:show:any number of cards|a card} from your hand on the bottom of your draw pile.\n{IfUpgraded:show:They|It} cost 0 until played."
+
+    if cls_name == "DoubleTap_C":
+        if lang == "zhs":
+            return "在这个回合，你打出的下{IfUpgraded:show:{Amount:diff()}|一}张[gold]攻击[/gold]牌会打出两次。"
+        return "This turn, your next {IfUpgraded:show:{Amount:diff()}|1} [gold]Attack[/gold]{IfUpgraded:show:s|} {IfUpgraded:show:are|is} played twice."
+
+    if cls_name == "Burst_C":
+        if lang == "zhs":
+            return "在这个回合，你打出的下{IfUpgraded:show:{Skills:diff()}|一}张技能牌会打出两次。"
+        return "This turn, your next {IfUpgraded:show:{Skills:diff()}|1} Skill{IfUpgraded:show:s|} {IfUpgraded:show:are|is} played twice."
+
+    if cls_name == "Buffer_C":
+        if lang == "zhs":
+            return "阻止下{IfUpgraded:show:{BufferPower:diff()}|一}次你受到的生命值损伤。"
+        return "Prevent the next {IfUpgraded:show:{BufferPower:diff()}|1} time{IfUpgraded:show:s|} you would lose HP."
+
+    if cls_name == "Loop_C":
+        if lang == "zhs":
+            return "在你的回合开始时，使用你最右侧的1个[gold]充能球[/gold]的被动能力{IfUpgraded:show:{Loop:diff()}次|}。"
+        return "At the start of your turn, trigger the passive ability of your next [gold]Orb[/gold]{IfUpgraded:show:{Loop:diff()} times|}."
+
+    if cls_name == "Storm_C":
+        if lang == "zhs":
+            return "你每打出一张[gold]能力牌[/gold]，生成{IfUpgraded:show:2|1}个[gold]闪电[/gold][gold]充能球[/gold]。"
+        return "Whenever you play a Power card, Channel {IfUpgraded:show:2|1} Lightning."
+
+    if cls_name == "Transmutation_C":
+        if lang == "zhs":
+            return "在你的手牌中加入X张{IfUpgraded:show:升级过的|}随机无色牌。它们在本回合的耗能变为0。"
+        return "Add X random{IfUpgraded:show: Upgraded|} Colorless cards into your hand. They cost 0 this turn."
+
+    if cls_name == "LimitBreak_C":
+        if lang == "zhs":
+            return "将你的[gold]力量[/gold]翻倍。"
+        return "Double your [gold]Strength[/gold]."
+
+    if cls_name == "Blind_C":
+        if lang == "zhs":
+            return "给予{IfUpgraded:show:所有敌人|}{Weak:diff()}层[gold]虚弱[/gold]。"
+        return "Apply {Weak:diff()} [gold]Weak[/gold].{IfUpgraded:show: to ALL enemies|}"
+
+    if cls_name == "Trip_C":
+        if lang == "zhs":
+            return "给予{IfUpgraded:show:所有敌人|}{Vulnerable:diff()}层[gold]易伤[/gold]。"
+        return "Apply {Vulnerable:diff()} [gold]Vulnerable[/gold].{IfUpgraded:show: to ALL enemies|}"
+
+    if cls_name == "BodySlam_C":
+        if lang == "zhs":
+            return "造成等量于你当前[gold]格挡[/gold]值的伤害。"
+        return "Deal damage equal to your current [gold]Block[/gold]."
+
     def repl_var(old: str, new: str) -> None:
         nonlocal desc
         desc = desc.replace(f"{{{old}:diff()}}", f"{{{new}:diff()}}")
@@ -1872,6 +1966,11 @@ def _apply_card_specific_desc_fixes(cls_name: str, lang: str, desc: str) -> str:
         "WellLaidPlans_C": {"Cards": "RetainAmount"},
         "WraithForm_C": {"MagicNumber": "IntangiblePower"},
         "Chrysalis_C": {"MagicNumber": "Cards"},
+        "DoubleTap_C": {"MagicNumber": "Amount"},
+        "Burst_C": {"MagicNumber": "Skills"},
+        "Buffer_C": {"MagicNumber": "BufferPower"},
+        "Loop_C": {"MagicNumber": "Loop"},
+        "MachineLearning_C": {"MagicNumber": "Cards"},
     }
     for old_name, new_name in rename_by_card.get(cls_name, {}).items():
         repl_var(old_name, new_name)
@@ -1905,6 +2004,54 @@ _X_PLUS_ONE_UPGRADE_DESC_CARDS = {
     "Malaise_C",
     "Doppelganger_C",
     "MultiCast_C",
+}
+
+# STS1 upgraded text occasionally mismatches the current ClassicMode implementation
+# (for collision/compatibility decisions). Skip auto-emitting upgradedDescription for these.
+_IGNORE_STS1_UPGRADE_DESCRIPTION_CARDS = {
+    "Amplify_C",
+    "BodySlam_C",
+    # These cards use handcrafted IfUpgraded branches in .description.
+    # Skip STS1 UPGRADE_DESCRIPTION merge to avoid whitespace/token drift.
+    "Armaments_C",
+    "Bloodletting_C",
+    "Forethought_C",
+    "DoubleTap_C",
+    "Burst_C",
+    "Buffer_C",
+    "Loop_C",
+    "Storm_C",
+    "Transmutation_C",
+    "LimitBreak_C",
+}
+
+_FORCE_CARD_DESCRIPTION_LOC = {
+    "eng": {
+        "BODY_SLAM_C.description": "Deal damage equal to your current [gold]Block[/gold].",
+        "RIDDLE_WITH_HOLES_C.description": "Deal {Damage:diff()} damage {IfUpgraded:show:7|5} times.",
+        "BLIND_C.description": "Apply {Weak:diff()} [gold]Weak[/gold].{IfUpgraded:show: to ALL enemies|}",
+        "TRIP_C.description": "Apply {Vulnerable:diff()} [gold]Vulnerable[/gold].{IfUpgraded:show: to ALL enemies|}",
+        "DOUBLE_TAP_C.description": "This turn, your next {IfUpgraded:show:{Amount:diff()}|1} [gold]Attack[/gold]{IfUpgraded:show:s|} {IfUpgraded:show:are|is} played twice.",
+        "BURST_C.description": "This turn, your next {IfUpgraded:show:{Skills:diff()}|1} Skill{IfUpgraded:show:s|} {IfUpgraded:show:are|is} played twice.",
+        "BUFFER_C.description": "Prevent the next {IfUpgraded:show:{BufferPower:diff()}|1} time{IfUpgraded:show:s|} you would lose HP.",
+        "LOOP_C.description": "At the start of your turn, trigger the passive ability of your next [gold]Orb[/gold]{IfUpgraded:show:{Loop:diff()} times|}.",
+        "STORM_C.description": "Whenever you play a Power card, Channel {IfUpgraded:show:2|1} Lightning.",
+        "TRANSMUTATION_C.description": "Add X random{IfUpgraded:show: Upgraded|} Colorless cards into your hand. They cost 0 this turn.",
+        "LIMIT_BREAK_C.description": "Double your [gold]Strength[/gold].",
+    },
+    "zhs": {
+        "BODY_SLAM_C.description": "造成等量于你当前[gold]格挡[/gold]值的伤害。",
+        "RIDDLE_WITH_HOLES_C.description": "造成{Damage:diff()}点伤害{IfUpgraded:show:7|5}次。",
+        "BLIND_C.description": "给予{IfUpgraded:show:所有敌人|}{Weak:diff()}层[gold]虚弱[/gold]。",
+        "TRIP_C.description": "给予{IfUpgraded:show:所有敌人|}{Vulnerable:diff()}层[gold]易伤[/gold]。",
+        "DOUBLE_TAP_C.description": "在这个回合，你打出的下{IfUpgraded:show:{Amount:diff()}|一}张[gold]攻击[/gold]牌会打出两次。",
+        "BURST_C.description": "在这个回合，你打出的下{IfUpgraded:show:{Skills:diff()}|一}张技能牌会打出两次。",
+        "BUFFER_C.description": "阻止下{IfUpgraded:show:{BufferPower:diff()}|一}次你受到的生命值损伤。",
+        "LOOP_C.description": "在你的回合开始时，使用你最右侧的1个[gold]充能球[/gold]的被动能力{IfUpgraded:show:{Loop:diff()}次|}。",
+        "STORM_C.description": "你每打出一张[gold]能力牌[/gold]，生成{IfUpgraded:show:2|1}个[gold]闪电[/gold][gold]充能球[/gold]。",
+        "TRANSMUTATION_C.description": "在你的手牌中加入X张{IfUpgraded:show:升级过的|}随机无色牌。它们在本回合的耗能变为0。",
+        "LIMIT_BREAK_C.description": "将你的[gold]力量[/gold]翻倍。",
+    },
 }
 
 
@@ -2026,6 +2173,23 @@ def generate_localization(sts1_root, project_dir):
                     # STS2 renders keyword tags (e.g. Exhaust/Innate/Ethereal) from card metadata.
                     # Remove standalone keyword sentences copied from STS1 descriptions to avoid duplicates.
                     desc = _strip_auto_keyword_sentences(desc)
+
+                    upgraded_desc_raw = entry.get("UPGRADE_DESCRIPTION", "")
+                    if (
+                        cls_name not in _IGNORE_STS1_UPGRADE_DESCRIPTION_CARDS
+                        and _is_valid_upgrade_description(upgraded_desc_raw)
+                    ):
+                        upgraded_desc = _convert_card_desc(upgraded_desc_raw)
+                        if cls_name in _REPEAT_VAR_CARDS:
+                            upgraded_desc = upgraded_desc.replace("{MagicNumber:", "{Repeat:")
+                            upgraded_desc = upgraded_desc.replace("{MagicNumber}", "{Repeat}")
+                        upgraded_desc = _apply_card_specific_desc_fixes(cls_name, lang, upgraded_desc)
+                        if lang == "zhs":
+                            upgraded_desc = _normalize_zhs_x_spacing(upgraded_desc)
+                        upgraded_desc = _strip_auto_keyword_sentences(upgraded_desc)
+                        desc = _merge_upgrade_branch_into_description(desc, upgraded_desc)
+                        card_loc[f"{model_key}.upgradedDescription"] = upgraded_desc
+
                     card_loc[f"{model_key}.description"] = desc
                     card_loc[f"{model_key}.selectionScreenPrompt"] = default_prompt
                 else:
@@ -2049,6 +2213,14 @@ def generate_localization(sts1_root, project_dir):
 
             # Keep non-card-model custom keys that are consumed by runtime patches.
             card_loc.update(_EXTRA_CARD_LOC.get(lang, {}))
+
+            # Final hard overrides for unstable upgraded-description cards.
+            # Keep this at the end so no subsequent transform can re-mangle them.
+            for key, value in _FORCE_CARD_DESCRIPTION_LOC.get(lang, {}).items():
+                card_loc[key] = value
+                upgraded_key = key.replace(".description", ".upgradedDescription")
+                if upgraded_key in card_loc:
+                    del card_loc[upgraded_key]
 
             card_loc_by_lang[lang] = card_loc
             out_dir_by_lang[lang] = out_dir
@@ -2162,6 +2334,10 @@ def generate_localization(sts1_root, project_dir):
     # Run zh cleanup/highlight rules after both language dictionaries are built.
     if "eng" in card_loc_by_lang and "zhs" in card_loc_by_lang:
         _apply_zh_spacing_and_highlight(card_loc_by_lang["zhs"], card_loc_by_lang["eng"])
+        # Final zh guard: keep Blind_C compact around IfUpgraded branch.
+        card_loc_by_lang["zhs"]["BLIND_C.description"] = "给予{IfUpgraded:show:所有敌人|}{Weak:diff()}层[gold]虚弱[/gold]。"
+        # Final zh guard: keep Trip_C compact around IfUpgraded branch.
+        card_loc_by_lang["zhs"]["TRIP_C.description"] = "给予{IfUpgraded:show:所有敌人|}{Vulnerable:diff()}层[gold]易伤[/gold]。"
     if "eng" in relic_loc_by_lang and "zhs" in relic_loc_by_lang:
         _apply_zh_term_highlight_to_loc_dict(relic_loc_by_lang["zhs"], relic_loc_by_lang["eng"], "relics")
     if "eng" in power_loc_by_lang and "zhs" in power_loc_by_lang:

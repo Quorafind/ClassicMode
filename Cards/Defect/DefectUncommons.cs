@@ -576,6 +576,10 @@ public sealed class Darkness_C : ClassicDefectCard
             }
         }
     }
+
+    protected override void OnUpgrade()
+    {
+    }
 }
 
 // STS1 Equilibrium: 2 energy, gain 13 Block (16 upgraded). Retain your hand this turn.
@@ -628,19 +632,35 @@ public sealed class Fission_C : ClassicDefectCard
             return;
 
         int orbCount = orbQueue.Orbs.Count;
-        var orbManager = NCombatRoom.Instance?.GetCreatureNode(Owner.Creature)?.OrbManager;
-        foreach (OrbModel orb in orbQueue.Orbs.ToList())
+        if (IsUpgraded)
         {
-            if (!orbQueue.Remove(orb))
-                continue;
+            // STS1 Fission+: evoke all orbs, then still grant energy/draw per orb.
+            for (int i = 0; i < orbCount; i++)
+            {
+                await OrbCmd.EvokeNext(choiceContext, Owner, dequeue: true);
+                await Cmd.Wait(0.1f);
+            }
+        }
+        else
+        {
+            var orbManager = NCombatRoom.Instance?.GetCreatureNode(Owner.Creature)?.OrbManager;
+            foreach (OrbModel orb in orbQueue.Orbs.ToList())
+            {
+                if (!orbQueue.Remove(orb))
+                    continue;
 
-            // Visual-only removal; does not call orb.Evoke() and thus does not trigger orb effects.
-            orbManager?.EvokeOrbAnim(orb);
-            orb.RemoveInternal();
+                // Base Fission removes orbs without invoking their evoke effects.
+                orbManager?.EvokeOrbAnim(orb);
+                orb.RemoveInternal();
+            }
         }
 
         await PlayerCmd.GainEnergy(orbCount, Owner);
         await CardPileCmd.Draw(choiceContext, orbCount, Owner);
+    }
+
+    protected override void OnUpgrade()
+    {
     }
 }
 
@@ -1084,6 +1104,10 @@ public sealed class Tempest_C : ClassicDefectCard
         {
             await OrbCmd.Channel<LightningOrb>(choiceContext, Owner);
         }
+    }
+
+    protected override void OnUpgrade()
+    {
     }
 }
 

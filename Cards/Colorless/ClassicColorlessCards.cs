@@ -132,6 +132,7 @@ public sealed class Discovery_C : ClassicColorlessCard
 
     protected override void OnUpgrade()
     {
+        RemoveKeyword(CardKeyword.Exhaust);
     }
 }
 
@@ -494,7 +495,7 @@ public sealed class SadisticNature_C : ClassicColorlessCard
 
 public sealed class ThinkingAhead_C : ClassicColorlessCard
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => IsUpgraded ? [] : [CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
 
     public ThinkingAhead_C() : base("thinking_ahead", 0, CardType.Skill, CardRarity.Rare, TargetType.Self) { }
 
@@ -513,7 +514,10 @@ public sealed class ThinkingAhead_C : ClassicColorlessCard
             await CardPileCmd.Add(selected, PileType.Draw, CardPilePosition.Top);
     }
 
-    protected override void OnUpgrade() { }
+    protected override void OnUpgrade()
+    {
+        RemoveKeyword(CardKeyword.Exhaust);
+    }
 }
 
 public sealed class TheBomb_C : ClassicColorlessCard
@@ -593,7 +597,10 @@ public sealed class SecretTechnique_C : ClassicColorlessCard
             await CardPileCmd.Add(selected, PileType.Hand);
     }
 
-    protected override void OnUpgrade() { }
+    protected override void OnUpgrade()
+    {
+        RemoveKeyword(CardKeyword.Exhaust);
+    }
 }
 
 public sealed class SecretWeapon_C : ClassicColorlessCard
@@ -618,7 +625,10 @@ public sealed class SecretWeapon_C : ClassicColorlessCard
             await CardPileCmd.Add(selected, PileType.Hand);
     }
 
-    protected override void OnUpgrade() { }
+    protected override void OnUpgrade()
+    {
+        RemoveKeyword(CardKeyword.Exhaust);
+    }
 }
 
 public sealed class Chrysalis_C : ClassicColorlessCard
@@ -736,4 +746,9 @@ public sealed class Transmutation_C : ClassicColorlessCard
             await CardPileCmd.AddGeneratedCardToCombat(generated, PileType.Hand, Owner);
         }
     }
+
+    protected override void OnUpgrade()
+    {
+    }
 }
+

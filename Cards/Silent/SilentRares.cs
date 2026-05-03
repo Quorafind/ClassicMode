@@ -159,11 +159,6 @@ public sealed class FanOfKnives_C : ClassicSilentCard
         DynamicVars.Damage.UpgradeValueBy(3m);
     }
 
-    public override string PortraitPath => ModelDb.Card<FanOfKnives>().PortraitPath;
-
-    public override string BetaPortraitPath => ModelDb.Card<FanOfKnives>().BetaPortraitPath;
-
-    public override IEnumerable<string> AllPortraitPaths => [PortraitPath, BetaPortraitPath];
 }
 
 
@@ -319,6 +314,10 @@ public sealed class Doppelganger_C : ClassicSilentCard
             await PowerCmd.Apply<EnergyNextTurnPower>(Owner.Creature, amount, Owner.Creature, this);
         }
     }
+
+    protected override void OnUpgrade()
+    {
+    }
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -354,6 +353,10 @@ public sealed class Malaise_C : ClassicSilentCard
         }
         await PowerCmd.Apply<StrengthPower>(cardPlay.Target, -amount, Owner.Creature, this);
         await PowerCmd.Apply<WeakPower>(cardPlay.Target, amount, Owner.Creature, this);
+    }
+
+    protected override void OnUpgrade()
+    {
     }
 }
 
@@ -417,6 +420,10 @@ public sealed class StormOfSteel_C : ClassicSilentCard
                 CardCmd.Upgrade(shiv);
             }
         }
+    }
+
+    protected override void OnUpgrade()
+    {
     }
 }
 

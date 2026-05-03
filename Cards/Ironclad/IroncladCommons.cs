@@ -85,6 +85,10 @@ public sealed class Armaments_C : ClassicIroncladCard
                 CardCmd.Upgrade(card);
         }
     }
+
+    protected override void OnUpgrade()
+    {
+    }
 }
 
 // ────────────────────────────────────────────────────────────────────────────

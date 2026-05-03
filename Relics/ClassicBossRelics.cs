@@ -45,7 +45,15 @@ public sealed class CoffeeDripperRelic : ClassicRelic
     protected override IEnumerable<DynamicVar> CanonicalVars => [new EnergyVar(1)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.ForEnergy(this)];
     public override decimal ModifyMaxEnergy(Player player, decimal amount) => player == Owner ? amount + 1m : amount;
-    public override decimal ModifyRestSiteHealAmount(Creature creature, decimal amount) => creature == Owner.Creature ? 0m : amount;
+    public override bool TryModifyRestSiteOptions(Player player, ICollection<RestSiteOption> options)
+    {
+        if (player != Owner) return false;
+
+        var removed = false;
+        removed |= options.Remove(options.FirstOrDefault(o => o is HealRestSiteOption));
+        removed |= options.Remove(options.FirstOrDefault(o => o is MendRestSiteOption));
+        return removed;
+    }
 }
 
 public sealed class CursedKeyRelic : ClassicRelic

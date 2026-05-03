@@ -320,8 +320,7 @@ public sealed class Impervious_C : ClassicIroncladCard
 // STS1 Limit Break: 1 energy, double your Strength. Exhaust (no exhaust upgraded).
 public sealed class LimitBreak_C : ClassicIroncladCard
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords =>
-        IsUpgraded ? [] : [CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
 
     protected override IEnumerable<IHoverTip> ExtraHoverTips =>
         [HoverTipFactory.FromPower<StrengthPower>()];
@@ -343,7 +342,7 @@ public sealed class LimitBreak_C : ClassicIroncladCard
 
     protected override void OnUpgrade()
     {
-        // Exhaust keyword removed via CanonicalKeywords check
+        RemoveKeyword(CardKeyword.Exhaust);
     }
 }
 
@@ -417,7 +416,9 @@ public sealed class Brutality_C : ClassicIroncladCard
 
     protected override void OnUpgrade()
     {
-        // Innate keyword added via CanonicalKeywords check
+        // Apply Innate explicitly on upgrade so behavior doesn't depend on
+        // runtime keyword recomputation timing.
+        AddKeyword(CardKeyword.Innate);
     }
 }
 

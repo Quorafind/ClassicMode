@@ -276,6 +276,10 @@ public sealed class MultiCast_C : ClassicDefectCard
             await Cmd.Wait(0.25f);
         }
     }
+
+    protected override void OnUpgrade()
+    {
+    }
 }
 
 // STS1 Rainbow: moved to uncommon (matching STS1 rarity).
