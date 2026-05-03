@@ -22,12 +22,14 @@ internal static class ClassicModePanel
 {
     private static PanelContainer? _root;
     private static TickboxRow? _cardsRow;
-    private static TickboxRow? _relicsRow;
+    private static TickboxRow? _relicsAddRow;
+    private static TickboxRow? _relicsOnlyRow;
     private static TickboxRow? _hybridRow;
     private static TickboxRow? _dedupeRow;
     private static TickboxRow? _colorlessRow;
     private static TickboxRow? _colorlessHybridRow;
     private static TickboxRow? _colorlessDedupeRow;
+    private static TickboxRow? _replaceAncientsRow;
     private static StartRunLobby? _lobby;
     private static bool _suppressLobbySync;
 
@@ -48,12 +50,14 @@ internal static class ClassicModePanel
             _root.QueueFree();
         _root = null;
         _cardsRow = null;
-        _relicsRow = null;
+        _relicsAddRow = null;
+        _relicsOnlyRow = null;
         _hybridRow = null;
         _dedupeRow = null;
         _colorlessRow = null;
         _colorlessHybridRow = null;
         _colorlessDedupeRow = null;
+        _replaceAncientsRow = null;
         _lobby = null;
         _suppressLobbySync = false;
     }
@@ -111,12 +115,14 @@ internal static class ClassicModePanel
             if (!canEdit)
             {
                 ClassicConfig.ClassicCards = false;
-                ClassicConfig.ClassicRelics = false;
+                ClassicConfig.AddClassicRelics = false;
+                ClassicConfig.OnlyClassicRelics = false;
                 ClassicConfig.ClassicHybrid = false;
                 ClassicConfig.HybridDedupe = false;
                 ClassicConfig.ClassicColorless = false;
                 ClassicConfig.ClassicColorlessHybrid = false;
                 ClassicConfig.ClassicColorlessDedupe = false;
+                ClassicConfig.ReplaceAncientsWithDarv = false;
             }
 
             ApplyEditability(canEdit);
@@ -128,12 +134,15 @@ internal static class ClassicModePanel
         try
         {
             ClassicConfig.ClassicCards = modifiers.Any(m => m is ClassicCardsCustomModeModifier);
-            ClassicConfig.ClassicRelics = modifiers.Any(m => m is ClassicRelicsCustomModeModifier);
+            ClassicConfig.AddClassicRelics = modifiers.Any(m => m is AddClassicRelicsCustomModeModifier);
+            ClassicConfig.OnlyClassicRelics = modifiers.Any(m => m is OnlyClassicRelicsCustomModeModifier)
+                || modifiers.Any(m => m is ClassicRelicsCustomModeModifier);
             ClassicConfig.ClassicHybrid = modifiers.Any(m => m is ClassicHybridCustomModeModifier);
             ClassicConfig.HybridDedupe = modifiers.Any(m => m is ClassicHybridDedupeCustomModeModifier);
             ClassicConfig.ClassicColorless = modifiers.Any(m => m is ClassicColorlessCustomModeModifier);
             ClassicConfig.ClassicColorlessHybrid = modifiers.Any(m => m is ClassicColorlessHybridCustomModeModifier);
             ClassicConfig.ClassicColorlessDedupe = modifiers.Any(m => m is ClassicColorlessDedupeCustomModeModifier);
+            ClassicConfig.ReplaceAncientsWithDarv = modifiers.Any(m => m is ReplaceAncientsWithDarvCustomModeModifier);
             RefreshCardToggleRows();
             ApplyEditability(canEdit);
         }
@@ -154,8 +163,10 @@ internal static class ClassicModePanel
         var modifiers = new List<ModifierModel>();
         if (ClassicConfig.ClassicCards)
             modifiers.Add(ModelDb.Modifier<ClassicCardsCustomModeModifier>().ToMutable());
-        if (ClassicConfig.ClassicRelics)
-            modifiers.Add(ModelDb.Modifier<ClassicRelicsCustomModeModifier>().ToMutable());
+        if (ClassicConfig.AddClassicRelics)
+            modifiers.Add(ModelDb.Modifier<AddClassicRelicsCustomModeModifier>().ToMutable());
+        if (ClassicConfig.OnlyClassicRelics)
+            modifiers.Add(ModelDb.Modifier<OnlyClassicRelicsCustomModeModifier>().ToMutable());
         if (ClassicConfig.ClassicHybrid)
             modifiers.Add(ModelDb.Modifier<ClassicHybridCustomModeModifier>().ToMutable());
         if (ClassicConfig.HybridDedupe)
@@ -166,6 +177,8 @@ internal static class ClassicModePanel
             modifiers.Add(ModelDb.Modifier<ClassicColorlessHybridCustomModeModifier>().ToMutable());
         if (ClassicConfig.ClassicColorlessDedupe)
             modifiers.Add(ModelDb.Modifier<ClassicColorlessDedupeCustomModeModifier>().ToMutable());
+        if (ClassicConfig.ReplaceAncientsWithDarv)
+            modifiers.Add(ModelDb.Modifier<ReplaceAncientsWithDarvCustomModeModifier>().ToMutable());
 
         _lobby.SetModifiers(modifiers);
     }
@@ -178,18 +191,20 @@ internal static class ClassicModePanel
     private static void ApplyEditability(bool canEdit)
     {
         _cardsRow?.SetEnabled(canEdit);
-        _relicsRow?.SetEnabled(canEdit);
+        _relicsAddRow?.SetEnabled(canEdit);
+        _relicsOnlyRow?.SetEnabled(canEdit);
         _hybridRow?.SetEnabled(canEdit);
         // Dedupe still depends on Hybrid. Keep disabled if Hybrid is off.
         _dedupeRow?.SetEnabled(canEdit && ClassicConfig.ClassicHybrid);
         _colorlessRow?.SetEnabled(canEdit);
         _colorlessHybridRow?.SetEnabled(canEdit);
         _colorlessDedupeRow?.SetEnabled(canEdit && ClassicConfig.ClassicColorlessHybrid);
+        _replaceAncientsRow?.SetEnabled(canEdit);
     }
 
     private static void RefreshCardToggleRows()
     {
-        if (_cardsRow == null || _hybridRow == null || _dedupeRow == null || _colorlessRow == null || _colorlessHybridRow == null || _colorlessDedupeRow == null)
+        if (_cardsRow == null || _hybridRow == null || _dedupeRow == null || _colorlessRow == null || _colorlessHybridRow == null || _colorlessDedupeRow == null || _relicsAddRow == null || _relicsOnlyRow == null || _replaceAncientsRow == null)
             return;
 
         // Hybrid is mutually exclusive with pure classic card mode.
@@ -209,10 +224,16 @@ internal static class ClassicModePanel
         _colorlessRow.SetValueSilently(ClassicConfig.ClassicColorless);
         _colorlessHybridRow.SetValueSilently(ClassicConfig.ClassicColorlessHybrid);
         _colorlessDedupeRow.SetValueSilently(ClassicConfig.ClassicColorlessDedupe);
+        if (ClassicConfig.AddClassicRelics && ClassicConfig.OnlyClassicRelics)
+            ClassicConfig.OnlyClassicRelics = false;
+        _relicsAddRow.SetValueSilently(ClassicConfig.AddClassicRelics);
+        _relicsOnlyRow.SetValueSilently(ClassicConfig.OnlyClassicRelics);
+        _replaceAncientsRow.SetValueSilently(ClassicConfig.ReplaceAncientsWithDarv);
 
         // Dedupe only has effect under Hybrid mode.
         _dedupeRow.SetEnabled(CanLocalEditLobby() && ClassicConfig.ClassicHybrid);
         _colorlessDedupeRow.SetEnabled(CanLocalEditLobby() && ClassicConfig.ClassicColorlessHybrid);
+        _replaceAncientsRow.SetEnabled(CanLocalEditLobby());
     }
 
     private static PanelContainer BuildPanel()
@@ -365,14 +386,39 @@ internal static class ClassicModePanel
         vbox.AddChild(sep3);
 
         // Relic toggle
-        _relicsRow = new TickboxRow("Classic Relics", "\u7ecf\u5178\u9057\u7269", font,
-            ClassicConfig.ClassicRelics, on =>
+        _relicsAddRow = new TickboxRow("Add Classic Relics", "\u6dfb\u52a0\u7ecf\u5178\u9057\u7269", font,
+            ClassicConfig.AddClassicRelics, on =>
             {
-                ClassicConfig.ClassicRelics = on;
+                ClassicConfig.AddClassicRelics = on;
+                if (on && ClassicConfig.OnlyClassicRelics)
+                    ClassicConfig.OnlyClassicRelics = false;
+                RefreshCardToggleRows();
                 SyncLobbyFromLocalConfig();
-                Log.Info($"[ClassicMode] Classic Relics: {on}");
+                Log.Info($"[ClassicMode] Add Classic Relics: {on}");
             });
-        vbox.AddChild(_relicsRow);
+        vbox.AddChild(_relicsAddRow);
+
+        _relicsOnlyRow = new TickboxRow("Only Classic Relics", "\u4ec5\u7ecf\u5178\u9057\u7269", font,
+            ClassicConfig.OnlyClassicRelics, on =>
+            {
+                ClassicConfig.OnlyClassicRelics = on;
+                if (on && ClassicConfig.AddClassicRelics)
+                    ClassicConfig.AddClassicRelics = false;
+                RefreshCardToggleRows();
+                SyncLobbyFromLocalConfig();
+                Log.Info($"[ClassicMode] Only Classic Relics: {on}");
+            });
+        vbox.AddChild(_relicsOnlyRow);
+
+        _replaceAncientsRow = new TickboxRow("Replace Ancients", "\u66ff\u6362\u5148\u53e4\u4e4b\u6c11", font,
+            ClassicConfig.ReplaceAncientsWithDarv, on =>
+            {
+                ClassicConfig.ReplaceAncientsWithDarv = on;
+                RefreshCardToggleRows();
+                SyncLobbyFromLocalConfig();
+                Log.Info($"[ClassicMode] Replace Ancients With Darv: {on}");
+            });
+        vbox.AddChild(_replaceAncientsRow);
 
         RefreshCardToggleRows();
 

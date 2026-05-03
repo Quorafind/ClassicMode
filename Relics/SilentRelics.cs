@@ -23,6 +23,28 @@ namespace ClassicModeMod;
 // ═══════════════════════════════════════════════════════════════════
 
 /// <summary>
+/// STS1 Ring of the Serpent: At the start of each turn, draw 1 additional card.
+/// Starter-upgrade relic (upgrade of Ring of the Snake).
+/// </summary>
+public sealed class RingOfTheSerpent : ClassicRelic
+{
+    public RingOfTheSerpent() : base("ringOfTheSerpent") { }
+
+    public override RelicRarity Rarity => RelicRarity.Starter;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+        [new CardsVar(1)];
+
+    public override decimal ModifyHandDraw(Player player, decimal count)
+    {
+        if (player != Owner)
+            return count;
+
+        return count + DynamicVars.Cards.BaseValue;
+    }
+}
+
+/// <summary>
 /// STS1 Wrist Blade: Attacks that cost 0 deal 4 additional damage.
 /// </summary>
 public sealed class WristBlade : ClassicRelic

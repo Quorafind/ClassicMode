@@ -14,6 +14,12 @@ internal static class PowerIconPathHelper
         if (power?.Id == null)
             return false;
 
+        if (power is ClassicPlatedArmorPower_C)
+        {
+            path = ModelDb.Power<PlatingPower>().IconPath;
+            return true;
+        }
+
         // Flex can be represented as a temporary strength power instance.
         // Keep this compatibility branch to avoid regressions from pure ID-based lookup.
         if (power is FlexPower || (power is TemporaryStrengthPower tsp && tsp.OriginModel is Flex_C))
@@ -41,6 +47,12 @@ internal static class PowerIconPathHelper
         path = string.Empty;
         if (power?.Id == null)
             return false;
+
+        if (power is ClassicPlatedArmorPower_C)
+        {
+            path = ModelDb.Power<PlatingPower>().ResolvedBigIconPath;
+            return true;
+        }
 
         var slug = power.Id.Entry.ToLowerInvariant();
         var bigTres = ImageHelper.GetImagePath($"powers/{slug}_big.tres");

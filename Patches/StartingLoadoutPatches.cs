@@ -87,7 +87,7 @@ internal static class IroncladStartingRelicsPatch
 {
     static bool Prefix(ref IReadOnlyList<RelicModel> __result)
     {
-        if (!ClassicConfig.ClassicRelics) return true;
+        if (!ClassicConfig.OnlyClassicRelics) return true;
         __result = new[] { ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.BurningBlood>() };
         return false;
     }
@@ -98,7 +98,7 @@ internal static class SilentStartingRelicsPatch
 {
     static bool Prefix(ref IReadOnlyList<RelicModel> __result)
     {
-        if (!ClassicConfig.ClassicRelics) return true;
+        if (!ClassicConfig.OnlyClassicRelics) return true;
         __result = new[] { ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.RingOfTheSnake>() };
         return false;
     }
@@ -109,7 +109,7 @@ internal static class DefectStartingRelicsPatch
 {
     static bool Prefix(ref IReadOnlyList<RelicModel> __result)
     {
-        if (!ClassicConfig.ClassicRelics) return true;
+        if (!ClassicConfig.OnlyClassicRelics) return true;
         __result = new[] { ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.CrackedCore>() };
         return false;
     }

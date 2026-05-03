@@ -8,11 +8,13 @@ public abstract class ClassicRelic(string assetName) : RelicModel
 {
     public override string PackedIconPath => $"res://images/relics/classic/{assetName}.png";
 
+    protected override string BigIconPath => PackedIconPath;
+
     protected override string PackedIconOutlinePath =>
         $"res://images/relics/classic/outline/{assetName}.png";
 
     public override bool IsAllowed(IRunState runState)
     {
-        return ClassicConfig.ClassicRelics || ClassicConfig.ClassicHybrid;
+        return ClassicConfig.AddClassicRelics || ClassicConfig.OnlyClassicRelics;
     }
 }

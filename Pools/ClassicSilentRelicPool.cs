@@ -15,14 +15,12 @@ public sealed class ClassicSilentRelicPool : RelicPoolModel
         [
             // Starter
             ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.RingOfTheSnake>(),
-            // Common
-            ModelDb.Relic<WristBlade>(),
+            ModelDb.Relic<RingOfTheSerpent>(),
             // Uncommon
             ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.Tingsha>(),
             ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.OrnamentalFan>(),
             // Rare
             ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.ToughBandages>(),
-            ModelDb.Relic<HoveringKite>(),
             ModelDb.Relic<TheSpecimen>(),
             // Shop
             ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.NinjaScroll>(),

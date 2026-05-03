@@ -15,14 +15,11 @@ public sealed class ClassicDefectRelicPool : RelicPoolModel
         [
             // Starter
             ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.CrackedCore>(),
-            // Starter upgrade (boss relic swap)
             ModelDb.Relic<FrozenCore>(),
             // Common
             ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.DataDisk>(),
             // Uncommon
             ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.SymbioticVirus>(),
-            ModelDb.Relic<Inserter>(),
-            ModelDb.Relic<NuclearBattery>(),
             // Rare
             ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.EmotionChip>(),
             // Shop

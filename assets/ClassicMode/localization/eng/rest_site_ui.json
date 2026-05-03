@@ -1,0 +1,6 @@
+{
+  "OPTION_TOKE.name": "Toke",
+  "OPTION_TOKE.description": "Remove a card from your deck.",
+  "OPTION_TOKE.descriptionDisabled": "No removable cards in deck."
+}
+

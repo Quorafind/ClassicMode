@@ -347,11 +347,39 @@ def copy_relic_images(sts1_root: str, pck_root: str):
     outline_dst = os.path.join(relics_dst, "outline")
     os.makedirs(outline_dst, exist_ok=True)
 
+    pil_image = None
+    try:
+        from PIL import Image as _PILImage
+        pil_image = _PILImage
+    except ImportError:
+        print("  NOTE: Pillow not installed - relic icon crop disabled; copying original size.")
+
+    def _copy_relic_png(src_path: str, dst_path: str):
+        if pil_image is None:
+            shutil.copy2(src_path, dst_path)
+            return
+
+        with pil_image.open(src_path) as img:
+            w, h = img.size
+            if w <= 1 or h <= 1:
+                img.save(dst_path)
+                return
+
+            # Crop 1/4 on each side: keep center 1/2 width and 1/2 height.
+            crop_w = max(1, w // 2)
+            crop_h = max(1, h // 2)
+            left = (w - crop_w) // 2
+            top = (h - crop_h) // 2
+            right = left + crop_w
+            bottom = top + crop_h
+            cropped = img.crop((left, top, right, bottom))
+            cropped.save(dst_path)
+
     total = 0
     for fname in os.listdir(relics_src):
         if not fname.lower().endswith(".png"):
             continue
-        shutil.copy2(os.path.join(relics_src, fname), os.path.join(relics_dst, fname))
+        _copy_relic_png(os.path.join(relics_src, fname), os.path.join(relics_dst, fname))
         total += 1
 
     # Also copy outline versions if they exist
@@ -360,10 +388,49 @@ def copy_relic_images(sts1_root: str, pck_root: str):
         for fname in os.listdir(outline_src):
             if not fname.lower().endswith(".png"):
                 continue
-            shutil.copy2(os.path.join(outline_src, fname), os.path.join(outline_dst, fname))
+            _copy_relic_png(os.path.join(outline_src, fname), os.path.join(outline_dst, fname))
+
+    # Compatibility aliases for code-side camelCase asset keys.
+    # Some STS1 relic files are snake_case; keep both names in packed assets.
+    alias_pairs = [
+        ("ink_bottle.png", "inkBottle.png"),
+        ("serpent_ring.png", "ringOfTheSerpent.png"),
+        ("frozenOrb.png", "frozenCore.png"),
+        ("mark_of_pain.png", "markOfPain.png"),
+        ("crown.png", "bustedCrown.png"),
+        ("burnHammer.png", "fusionHammer.png"),
+        ("bark.png", "sacredBark.png"),
+        ("collar.png", "slaversCollar.png"),
+    ]
+    for src_name, alias_name in alias_pairs:
+        src_main = os.path.join(relics_dst, src_name)
+        dst_main = os.path.join(relics_dst, alias_name)
+        if os.path.isfile(src_main) and not os.path.isfile(dst_main):
+            shutil.copy2(src_main, dst_main)
+
+        src_outline = os.path.join(outline_dst, src_name)
+        dst_outline = os.path.join(outline_dst, alias_name)
+        if os.path.isfile(src_outline) and not os.path.isfile(dst_outline):
+            shutil.copy2(src_outline, dst_outline)
 
     print(f"  Copied {total} relic images.")
     return total
+
+
+def copy_custom_enchantment_icons(pck_root: str):
+    """Create custom enchantment icons from already-cropped relic art."""
+    relic_icon = os.path.join(pck_root, "images", "relics", "classic", "bottledLightning.png")
+    enchantments_dir = os.path.join(pck_root, "images", "enchantments")
+    os.makedirs(enchantments_dir, exist_ok=True)
+
+    if not os.path.isfile(relic_icon):
+        print(f"  WARNING: Source relic icon not found for BottledEnchantment: {relic_icon}")
+        return 0
+
+    dst_icon = os.path.join(enchantments_dir, "bottled_enchantment.png")
+    shutil.copy2(relic_icon, dst_icon)
+    print(f"  Copied custom enchantment icon: {dst_icon}")
+    return 1
 
 
 def _parse_sts1_atlas_entries(atlas_path: str):
@@ -668,6 +735,10 @@ _CUSTOM_POWER_LOC = {
         "EchoFormPower_C": {"NAME": "Echo Form", "DESCRIPTION": "The first card you play each turn is played twice."},
         "SadisticNaturePower_C": {"NAME": "Sadistic Nature", "DESCRIPTION": "Whenever you apply a debuff to an enemy, they take {Amount} damage."},
         "MagnetismPower_C": {"NAME": "Magnetism", "DESCRIPTION": "At the start of your turn, add a random colorless card into your hand."},
+        "ClassicPlatedArmorPower_C": {
+            "NAME": "Plated Armor",
+            "DESCRIPTION": "At the end of your turn, gain {Amount} Block. Whenever you lose HP from an attack, this effect loses 1 stack."
+        },
     },
     "zhs": {
         "FlexPower": {"NAME": "\u6d3b\u52a8\u808c\u8089", "DESCRIPTION": "\u83b7\u5f97 {Amount} \u70b9\u529b\u91cf\u3002\u56de\u5408\u7ed3\u675f\u65f6\uff0c\u5931\u53bb {Amount} \u70b9\u529b\u91cf\u3002"},
@@ -697,6 +768,10 @@ _CUSTOM_POWER_LOC = {
         "EchoFormPower_C": {"NAME": "\u56de\u54cd\u5f62\u6001", "DESCRIPTION": "\u6bcf\u56de\u5408\u4f60\u6253\u51fa\u7684\u7b2c\u4e00\u5f20\u724c\u4f1a\u88ab\u6253\u51fa\u4e24\u6b21\u3002"},
         "SadisticNaturePower_C": {"NAME": "\u6b8b\u8650\u5929\u6027", "DESCRIPTION": "\u6bcf\u5f53\u4f60\u7ed9\u654c\u4eba\u65bd\u52a0\u8d1f\u9762\u72b6\u6001\u65f6\uff0c\u4f7f\u5176\u53d7\u5230 {Amount} \u70b9\u4f24\u5bb3\u3002"},
         "MagnetismPower_C": {"NAME": "\u78c1\u529b", "DESCRIPTION": "\u5728\u4f60\u7684\u56de\u5408\u5f00\u59cb\u65f6\uff0c\u5c061\u5f20\u968f\u673a\u65e0\u8272\u724c\u52a0\u5165\u624b\u724c\u3002"},
+        "ClassicPlatedArmorPower_C": {
+            "NAME": "\u591a\u5c42\u62a4\u7532",
+            "DESCRIPTION": "\u5728\u4f60\u7684\u56de\u5408\u7ed3\u675f\u65f6\u83b7\u5f97 {Amount} \u70b9\u683c\u6321\u3002\u53d7\u5230\u653b\u51fb\u4f24\u5bb3\u800c\u5931\u53bb\u751f\u547d\u65f6\uff0c\u8be5\u6548\u679c\u5c42\u6570\u5c06\u51cf\u5c11 1 \u3002"
+        },
     },
 }
 
@@ -997,6 +1072,14 @@ def _convert_sts1_markup_to_sts2(text: str) -> str:
     v = re.sub(r"#b\s*(\{[^}]+\}|-?\d+)", r"[blue]\1[/blue]", v)
     v = re.sub(r"#y\s*([^\s，。！？；：,.!?]+)", r"[gold]\1[/gold]", v)
     v = re.sub(r"#[byrgp]", "", v)
+    for icon in ('[R]', '[G]', '[B]', '[E]', '[W]'):
+        v = v.replace(icon, '{energyPrefix:energyIcons(1)}')
+
+    def _collapse_energy(match):
+        count = len(re.findall(r'\{energyPrefix:energyIcons\(1\)\}', match.group(0)))
+        return f'{{energyPrefix:energyIcons({count})}}'
+
+    v = re.sub(r'(?:\{energyPrefix:energyIcons\(1\)\}\s*){2,}', _collapse_energy, v)
     v = re.sub(r"\bNL\b", "\n", v)
     v = re.sub(r" +", " ", v).strip()
     return v
@@ -1058,7 +1141,8 @@ _CARD_PROMPTS = {
     },
 }
 
-# Hardcoded relic descriptions for custom relics (base game relics already have loc)
+# Fallback overrides for custom relic localization.
+# Primary source is STS1 desktop localization in generate_localization().
 _CUSTOM_RELIC_LOC = {
     "eng": {
         "MarkOfPain": {
@@ -1088,7 +1172,12 @@ _CUSTOM_RELIC_LOC = {
         },
         "FrozenCore": {
             "NAME": "Frozen Core",
-            "DESCRIPTION": "If you end your turn with any empty Orb slots, Channel 1 Frost.",
+            "DESCRIPTION": "If you end your turn with any empty [gold]Orb[/gold] slots, [gold]Channel[/gold] [blue]1[/blue] [gold]Frost[/gold].",
+            "FLAVOR": ""
+        },
+        "RingOfTheSerpent": {
+            "NAME": "Ring of the Serpent",
+            "DESCRIPTION": "Replaces Ring of the Snake. At the start of your turn, draw [blue]1[/blue] additional card.",
             "FLAVOR": ""
         },
         "Inserter": {
@@ -1101,21 +1190,161 @@ _CUSTOM_RELIC_LOC = {
             "DESCRIPTION": "At the start of each combat, Channel 1 Plasma.",
             "FLAVOR": ""
         },
+        "ClassicBronzeScales": {
+            "NAME": "Bronze Scales",
+            "DESCRIPTION": "At the start of each combat, gain [blue]{ThornsPower}[/blue] [gold]Thorns[/gold].",
+            "FLAVOR": ""
+        },
+        "CeramicFishRelic": {
+            "NAME": "Ceramic Fish",
+            "DESCRIPTION": "Whenever you add a card to your deck, gain [blue]{Gold}[/blue] [gold]Gold[/gold].",
+            "FLAVOR": ""
+        },
+        "ToyOrnithopterRelic": {
+            "NAME": "Toy Ornithopter",
+            "DESCRIPTION": "Whenever you use a potion, heal [blue]{Heal}[/blue] HP.",
+            "FLAVOR": ""
+        },
+        "BirdFacedUrnRelic": {
+            "NAME": "Bird-Faced Urn",
+            "DESCRIPTION": "Whenever you play a [gold]Power[/gold] card, heal [blue]{Heal}[/blue] HP.",
+            "FLAVOR": ""
+        },
+        "BlueCandleRelic": {
+            "NAME": "Blue Candle",
+            "DESCRIPTION": "[gold]Unplayable[/gold] Curse cards can now be played.\n\nWhenever you play a Curse, lose [blue]1[/blue] HP and [gold]Exhaust[/gold] it.",
+            "FLAVOR": ""
+        },
+        "CalipersRelic": {
+            "NAME": "Calipers",
+            "DESCRIPTION": "At the start of your turn, lose [blue]{BlockLoss}[/blue] [gold]Block[/gold] rather than all of your [gold]Block[/gold].",
+            "FLAVOR": ""
+        },
+        "ClassicNunchaku": {
+            "NAME": "Nunchaku",
+            "DESCRIPTION": "Every time you play [blue]{Cards}[/blue] [gold]Attacks[/gold], gain {energyPrefix:energyIcons(1)}.",
+            "FLAVOR": ""
+        },
+        "DuVuDollRelic": {
+            "NAME": "Du-Vu Doll",
+            "DESCRIPTION": "For each Curse in your deck, start each combat with [blue]1[/blue] [gold]Strength[/gold].",
+            "FLAVOR": ""
+        },
+        "PreservedInsectRelic": {
+            "NAME": "Preserved Insect",
+            "DESCRIPTION": "Enemies in Elite combats have [blue]{HpReductionPercent}[/blue]% less HP.",
+            "FLAVOR": ""
+        },
+        "SmilingMaskRelic": {
+            "NAME": "Smiling Mask",
+            "DESCRIPTION": "The Merchant's card removal service now always costs [blue]50[/blue] [gold]Gold[/gold].",
+            "FLAVOR": ""
+        },
+        "SundialRelic": {
+            "NAME": "Sundial",
+            "DESCRIPTION": "Every [blue]{Shuffles}[/blue] times you shuffle your draw pile, gain {energyPrefix:energyIcons(2)}.",
+            "FLAVOR": ""
+        },
+        "ThreadAndNeedleRelic": {
+            "NAME": "Thread and Needle",
+            "DESCRIPTION": "Start each combat with [blue]4[/blue] Plated Armor.",
+            "FLAVOR": ""
+        },
+        "TinyChestRelic": {
+            "NAME": "Tiny Chest",
+            "DESCRIPTION": "Every [blue]4[/blue]th ? room is a [gold]Treasure[/gold] room.",
+            "FLAVOR": ""
+        },
+        "MatryoshkaRelic": {
+            "NAME": "Matryoshka",
+            "DESCRIPTION": "The next [blue]{ChestsLeft}[/blue] non-Boss chests you open contain [blue]2[/blue] [gold]Relics[/gold].",
+            "FLAVOR": ""
+        },
+        "OmamoriRelic": {
+            "NAME": "Omamori",
+            "DESCRIPTION": "Negate the next [blue]{Negates}[/blue] Curses you obtain.",
+            "FLAVOR": ""
+        },
+        "ToriiRelic": {
+            "NAME": "Torii",
+            "DESCRIPTION": "Whenever you would receive [blue]5[/blue] or less unblocked [gold]Attack[/gold] damage, reduce it to [blue]1[/blue].",
+            "FLAVOR": ""
+        },
+        "BottledFlameRelic": {
+            "NAME": "Bottled Flame",
+            "DESCRIPTION": "Upon pickup, choose an [gold]Attack[/gold] in your [gold]Deck[/gold] to [gold]Enchant[/gold] with [purple]{Enchantment}[/purple].",
+            "FLAVOR": ""
+        },
+        "BottledLightningRelic": {
+            "NAME": "Bottled Lightning",
+            "DESCRIPTION": "Upon pickup, choose a [gold]Skill[/gold] in your [gold]Deck[/gold] to [gold]Enchant[/gold] with [purple]{Enchantment}[/purple].",
+            "FLAVOR": ""
+        },
+        "BottledTornadoRelic": {
+            "NAME": "Bottled Tornado",
+            "DESCRIPTION": "Upon pickup, choose a [gold]Power[/gold] in your [gold]Deck[/gold] to [gold]Enchant[/gold] with [purple]{Enchantment}[/purple].",
+            "FLAVOR": ""
+        },
+        "BustedCrownRelic": {
+            "NAME": "Busted Crown",
+            "DESCRIPTION": "Gain {energyPrefix:energyIcons(1)} at the start of your turn. Future card rewards have [blue]2[/blue] fewer cards to choose from.",
+            "FLAVOR": "The Champ's crown... or a pale imitation?"
+        },
+        "CoffeeDripperRelic": {
+            "NAME": "Coffee Dripper",
+            "DESCRIPTION": "Gain {energyPrefix:energyIcons(1)} at the start of your turn. You can no longer [gold]Rest[/gold] at Rest Sites.",
+            "FLAVOR": "\"Yes, another cup please. Back to work. Back to work!\" - The Architect"
+        },
+        "CursedKeyRelic": {
+            "NAME": "Cursed Key",
+            "DESCRIPTION": "Gain {energyPrefix:energyIcons(1)} at the start of your turn. Whenever you open a non-Boss chest, obtain a Curse.",
+            "FLAVOR": "You can feel the malicious energy emanating from the key. Power comes at a price."
+        },
+        "FusionHammerRelic": {
+            "NAME": "Fusion Hammer",
+            "DESCRIPTION": "Gain {energyPrefix:energyIcons(1)} at the start of your turn. You can no longer [gold]Smith[/gold] at Rest Sites.",
+            "FLAVOR": "Once wielded, the owner can never let go."
+        },
+        "RunicCubeRelic": {
+            "NAME": "Runic Cube",
+            "DESCRIPTION": "Whenever you lose HP, draw [blue]1[/blue] card.",
+            "FLAVOR": "The runes are indecipherable."
+        },
+        "RunicDomeRelic": {
+            "NAME": "Runic Dome",
+            "DESCRIPTION": "Gain {energyPrefix:energyIcons(1)} at the start of your turn. You can no longer see enemy intents.",
+            "FLAVOR": "The runes are indecipherable."
+        },
+        "SacredBarkRelic": {
+            "NAME": "Sacred Bark",
+            "DESCRIPTION": "Double the effectiveness of potions.",
+            "FLAVOR": "A bark rumored to originate from the World tree."
+        },
+        "SlaversCollarRelic": {
+            "NAME": "Slaver's Collar",
+            "DESCRIPTION": "During Boss and Elite combats, gain {energyPrefix:energyIcons(1)} at the start of your turn.",
+            "FLAVOR": "Rusty miserable chains."
+        },
+        "TinyHouseRelic": {
+            "NAME": "Tiny House",
+            "DESCRIPTION": "Upon pickup, obtain [blue]1[/blue] potion. \\n Gain [blue]{Gold}[/blue] [gold]Gold[/gold]. \\n Raise your Max HP by [blue]{MaxHp}[/blue]. \\n Obtain [blue]1[/blue] card. \\n Upgrade [blue]1[/blue] random card.",
+            "FLAVOR": "\"A near perfect implementation of miniaturization. My finest work to date, but still not adequate.\" - The Architect"
+        },
     },
     "zhs": {
         "MarkOfPain": {
             "NAME": "\u75db\u695a\u5370\u8bb0",
-            "DESCRIPTION": "\u6bcf\u56de\u5408\u5f00\u59cb\u83b7\u5f97{energyPrefix:energyIcons(1)}\u3002\u5728\u6218\u6597\u5f00\u59cb\u65f6\uff0c\u5c06 2 \u5f20[gold]\u4f24\u53e3[/gold]\u653e\u5165\u4f60\u7684\u62bd\u724c\u5806\u3002",
+            "DESCRIPTION": "\u6bcf\u56de\u5408\u5f00\u59cb\u83b7\u5f97{energyPrefix:energyIcons(1)}\u3002\u5728\u6218\u6597\u5f00\u59cb\u65f6\uff0c\u5c062\u5f20\u4f24\u53e3\u653e\u5165\u4f60\u7684\u62bd\u724c\u5806\u3002",
             "FLAVOR": ""
         },
         "ChampionBelt": {
             "NAME": "\u51a0\u519b\u8170\u5e26",
-            "DESCRIPTION": "\u6bcf\u5f53\u4f60\u7ed9\u4e88[gold]\u6613\u4f24[/gold]\u65f6\uff0c\u540c\u65f6\u7ed9\u4e88 {WeakAmount} \u5c42[gold]\u865a\u5f31[/gold]\u3002",
+            "DESCRIPTION": "\u6bcf\u5f53\u4f60\u7ed9\u4e88\u6613\u4f24\u65f6\uff0c\u540c\u65f6\u7ed9\u4e88{WeakAmount}\u5c42\u865a\u5f31\u3002",
             "FLAVOR": ""
         },
         "WristBlade": {
             "NAME": "\u8896\u5251",
-            "DESCRIPTION": "\u8d39\u7528\u4e3a0\u7684[gold]\u653b\u51fb[/gold]\u724c\u989d\u5916\u9020\u6210 {ExtraDamage} \u70b9\u4f24\u5bb3\u3002",
+            "DESCRIPTION": "\u8d39\u7528\u4e3a0\u7684\u653b\u51fb\u724c\u989d\u5916\u9020\u6210{ExtraDamage}\u70b9\u4f24\u5bb3\u3002",
             "FLAVOR": ""
         },
         "HoveringKite": {
@@ -1125,25 +1354,284 @@ _CUSTOM_RELIC_LOC = {
         },
         "TheSpecimen": {
             "NAME": "\u751f\u7269\u6837\u672c",
-            "DESCRIPTION": "\u6bcf\u5f53\u6709\u654c\u4eba\u6b7b\u53bb\u65f6\uff0c\u5c06\u5176\u8eab\u4e0a\u7684[gold]\u4e2d\u6bd2[/gold]\u5c42\u6570\u79fb\u5230\u4e00\u540d\u968f\u673a\u654c\u4eba\u8eab\u4e0a\u3002",
+            "DESCRIPTION": "\u6bcf\u5f53\u6709\u654c\u4eba\u6b7b\u53bb\u65f6\uff0c\u5c06\u5176\u8eab\u4e0a\u7684\u4e2d\u6bd2\u5c42\u6570\u79fb\u5230\u4e00\u540d\u968f\u673a\u654c\u4eba\u8eab\u4e0a\u3002",
             "FLAVOR": ""
         },
         "FrozenCore": {
             "NAME": "\u51bb\u7ed3\u6838\u5fc3",
-            "DESCRIPTION": "\u66ff\u6362[gold]\u7834\u635f\u6838\u5fc3[/gold]\u3002\u5982\u679c\u4f60\u5728\u4f60\u7684\u56de\u5408\u7ed3\u675f\u65f6\u8fd8\u6709\u7a7a\u4f59\u7684[gold]\u5145\u80fd\u7403[/gold]\u680f\u4f4d\uff0c[gold]\u751f\u6210[/gold] 1 \u4e2a[gold]\u51b0\u971c[/gold][gold]\u5145\u80fd\u7403[/gold]\u3002",
+            "DESCRIPTION": "\u66ff\u6362\u7834\u635f\u6838\u5fc3\u3002\u5982\u679c\u4f60\u5728\u4f60\u7684\u56de\u5408\u7ed3\u675f\u65f6\u8fd8\u6709\u7a7a\u4f59\u7684[gold]\u5145\u80fd\u7403[/gold]\u680f\u4f4d\uff0c\u751f\u6210[blue]1[/blue]\u4e2a[gold]\u51b0\u971c[/gold][gold]\u5145\u80fd\u7403[/gold]\u3002",
+            "FLAVOR": ""
+        },
+        "RingOfTheSerpent": {
+            "NAME": "\u957f\u86c7\u6212\u6307",
+            "DESCRIPTION": "\u66ff\u6362\u86c7\u4e4b\u6212\u6307\u3002\u5728\u4f60\u7684\u6bcf\u4e2a\u56de\u5408\u5f00\u59cb\u65f6\uff0c\u989d\u5916\u62bd[blue]1[/blue]\u5f20\u724c\u3002",
             "FLAVOR": ""
         },
         "Inserter": {
             "NAME": "\u673a\u68b0\u81c2",
-            "DESCRIPTION": "\u6bcf 2 \u56de\u5408\uff0c\u83b7\u5f97 1 \u4e2a[gold]\u5145\u80fd\u7403[/gold]\u680f\u4f4d\u3002",
+            "DESCRIPTION": "\u6bcf2\u56de\u5408\uff0c\u83b7\u5f971\u4e2a\u5145\u80fd\u7403\u680f\u4f4d\u3002",
             "FLAVOR": ""
         },
         "NuclearBattery": {
             "NAME": "\u6838\u80fd\u7535\u6c60",
-            "DESCRIPTION": "\u5728\u6bcf\u573a\u6218\u6597\u5f00\u59cb\u65f6\uff0c[gold]\u751f\u6210[/gold] 1 \u4e2a[gold]\u7b49\u79bb\u5b50[/gold][gold]\u5145\u80fd\u7403[/gold]\u3002",
+            "DESCRIPTION": "\u5728\u6bcf\u573a\u6218\u6597\u5f00\u59cb\u65f6\uff0c\u751f\u62101\u4e2a\u7b49\u79bb\u5b50\u5145\u80fd\u7403\u3002",
             "FLAVOR": ""
         },
+        "ClassicBronzeScales": {
+            "NAME": "\u94dc\u5236\u9cde\u7247",
+            "DESCRIPTION": "\u5728\u6bcf\u573a\u6218\u6597\u5f00\u59cb\u65f6\uff0c\u83b7\u5f97[blue]{ThornsPower}[/blue]\u70b9[gold]\u8346\u68d8[/gold]\u3002",
+            "FLAVOR": ""
+        },
+        "CeramicFishRelic": {
+            "NAME": "\u9676\u74f7\u5c0f\u9c7c",
+            "DESCRIPTION": "\u6bcf\u6b21\u4f60\u5f80\u81ea\u5df1\u7684\u724c\u7ec4\u4e2d\u52a0\u5165\u4e00\u5f20\u5361\u724c\u65f6\uff0c\u83b7\u5f97[blue]{Gold}[/blue][gold]\u91d1\u5e01[/gold]\u3002",
+            "FLAVOR": ""
+        },
+        "ToyOrnithopterRelic": {
+            "NAME": "\u73a9\u5177\u6251\u7ffc\u98de\u673a",
+            "DESCRIPTION": "\u4f60\u6bcf\u4f7f\u7528\u4e00\u74f6\u836f\u6c34\uff0c\u56de\u590d[blue]{Heal}[/blue]\u70b9\u751f\u547d\u3002",
+            "FLAVOR": ""
+        },
+        "BirdFacedUrnRelic": {
+            "NAME": "\u9e1f\u9762\u74ee",
+            "DESCRIPTION": "\u6bcf\u5f53\u4f60\u6253\u51fa\u4e00\u5f20[gold]\u80fd\u529b\u724c[/gold]\uff0c\u56de\u590d[blue]{Heal}[/blue]\u70b9\u751f\u547d\u3002",
+            "FLAVOR": ""
+        },
+        "BlueCandleRelic": {
+            "NAME": "\u84dd\u8721\u70db",
+            "DESCRIPTION": "\u53ef\u4ee5\u6253\u51fa\u539f\u672c\u4e0d\u80fd\u88ab\u6253\u51fa\u7684[gold]\u8bc5\u5492\u724c[/gold]\uff0c\n\n\u6253\u51fa[gold]\u8bc5\u5492\u724c[/gold]\u4f1a\u8ba9\u4f60\u5931\u53bb[blue]1[/blue]\u70b9\u751f\u547d\u5e76\u5c06\u5176[gold]\u6d88\u8017[/gold]\u3002",
+            "FLAVOR": ""
+        },
+        "CalipersRelic": {
+            "NAME": "\u5916\u5361\u94b3",
+            "DESCRIPTION": "\u5728\u4f60\u7684\u56de\u5408\u5f00\u59cb\u65f6\uff0c\u4e0d\u518d\u5931\u53bb\u6240\u6709[gold]\u683c\u6321[/gold]\uff0c\u800c\u662f\u5931\u53bb[blue]{BlockLoss}[/blue]\u70b9[gold]\u683c\u6321[/gold]\u3002",
+            "FLAVOR": ""
+        },
+        "ClassicNunchaku": {
+            "NAME": "\u53cc\u8282\u68cd",
+            "DESCRIPTION": "\u4f60\u6bcf\u6253\u51fa[blue]{Cards}[/blue]\u5f20[gold]\u653b\u51fb\u724c[/gold]\uff0c\u83b7\u5f97{energyPrefix:energyIcons(1)}\u3002",
+            "FLAVOR": ""
+        },
+        "DuVuDollRelic": {
+            "NAME": "\u6bd2\u5deb\u5a03\u5a03",
+            "DESCRIPTION": "\u4f60\u7684\u724c\u7ec4\u4e2d\u6bcf\u6709\u4e00\u5f20[gold]\u8bc5\u5492[/gold]\u724c\uff0c\u4f60\u5728\u6218\u6597\u5f00\u59cb\u65f6\u5c31\u989d\u5916\u83b7\u5f97[blue]1[/blue]\u70b9[gold]\u529b\u91cf[/gold]\u3002",
+            "FLAVOR": ""
+        },
+        "PreservedInsectRelic": {
+            "NAME": "\u6606\u866b\u6807\u672c",
+            "DESCRIPTION": "\u7cbe\u82f1\u6218\u4e2d\u7684\u654c\u4eba\u751f\u547d\u51cf\u5c11[blue]{HpReductionPercent}[/blue]%\u3002",
+            "FLAVOR": ""
+        },
+        "SmilingMaskRelic": {
+            "NAME": "\u5fae\u7b11\u9762\u5177",
+            "DESCRIPTION": "\u5546\u4eba\u7684\u5361\u724c\u79fb\u9664\u670d\u52a1\u73b0\u5728\u4ef7\u683c\u6c38\u8fdc\u662f[blue]50[/blue][gold]\u91d1\u5e01[/gold]\u3002",
+            "FLAVOR": ""
+        },
+        "SundialRelic": {
+            "NAME": "\u65e5\u6677",
+            "DESCRIPTION": "\u4f60\u6bcf\u6d17\u724c[blue]{Shuffles}[/blue]\u6b21\uff0c\u83b7\u5f97{energyPrefix:energyIcons(2)}\u3002",
+            "FLAVOR": ""
+        },
+        "ThreadAndNeedleRelic": {
+            "NAME": "\u9488\u7ebf",
+            "DESCRIPTION": "\u5728\u6bcf\u573a\u6218\u6597\u5f00\u59cb\u65f6\uff0c\u83b7\u5f97[blue]4[/blue]\u5c42\u591a\u5c42\u62a4\u7532\u3002",
+            "FLAVOR": ""
+        },
+        "TinyChestRelic": {
+            "NAME": "\u5c0f\u5b9d\u7bb1",
+            "DESCRIPTION": "\u6bcf[blue]4[/blue]\u4e2a\uff1f\u623f\u95f4\u7684\u6700\u540e\u4e00\u4e2a\u5fc5\u662f[gold]\u5b9d\u7bb1\u623f[/gold]\u3002",
+            "FLAVOR": ""
+        },
+        "MatryoshkaRelic": {
+            "NAME": "\u5957\u5a03",
+            "DESCRIPTION": "\u4f60\u63a5\u4e0b\u6765\u6253\u5f00\u7684[blue]{ChestsLeft}[/blue]\u4e2a\u975e Boss \u5b9d\u7bb1\u5185\u4f1a\u6709[blue]2[/blue]\u4ef6[gold]\u9057\u7269[/gold]\u3002",
+            "FLAVOR": ""
+        },
+        "OmamoriRelic": {
+            "NAME": "\u5fa1\u5b88",
+            "DESCRIPTION": "\u62b5\u6d88\u4f60\u4e0b[blue]{Negates}[/blue]\u6b21\u83b7\u5f97\u7684\u8bc5\u5492\u3002",
+            "FLAVOR": ""
+        },
+        "ToriiRelic": {
+            "NAME": "\u9e1f\u5c45",
+            "DESCRIPTION": "\u6bcf\u5f53\u4f60\u53d7\u5230\u5c0f\u4e8e\u7b49\u4e8e[blue]5[/blue]\u70b9\u7684\u672a\u88ab[gold]\u683c\u6321[/gold][gold]\u653b\u51fb[/gold]\u4f24\u5bb3\u65f6\uff0c\u5c06\u4f24\u5bb3\u964d\u4f4e\u4e3a[blue]1[/blue]\u3002",
+            "FLAVOR": ""
+        },
+        "BottledFlameRelic": {
+            "NAME": "\u706b\u7130\u74f6",
+            "DESCRIPTION": "\u62fe\u8d77\u65f6\uff0c\u4ece[gold]\u724c\u7ec4[/gold]\u4e2d\u9009\u62e9\u4e00\u5f20[gold]\u653b\u51fb\u724c[/gold]\uff0c\u4e3a\u5b83[gold]\u9644\u9b54[/gold]\uff1a[purple]{Enchantment}[/purple]\u3002",
+            "FLAVOR": ""
+        },
+        "BottledLightningRelic": {
+            "NAME": "\u95ea\u7535\u74f6",
+            "DESCRIPTION": "\u62fe\u8d77\u65f6\uff0c\u4ece[gold]\u724c\u7ec4[/gold]\u4e2d\u9009\u62e9\u4e00\u5f20[gold]\u6280\u80fd\u724c[/gold]\uff0c\u4e3a\u5b83[gold]\u9644\u9b54[/gold]\uff1a[purple]{Enchantment}[/purple]\u3002",
+            "FLAVOR": ""
+        },
+        "BottledTornadoRelic": {
+            "NAME": "\u98ce\u66b4\u74f6",
+            "DESCRIPTION": "\u62fe\u8d77\u65f6\uff0c\u4ece[gold]\u724c\u7ec4[/gold]\u4e2d\u9009\u62e9\u4e00\u5f20[gold]\u80fd\u529b\u724c[/gold]\uff0c\u4e3a\u5b83[gold]\u9644\u9b54[/gold]\uff1a[purple]{Enchantment}[/purple]\u3002",
+            "FLAVOR": ""
+        },
+        "BustedCrownRelic": {
+            "NAME": "\u7834\u788e\u91d1\u51a0",
+            "DESCRIPTION": "\u5728\u6bcf\u56de\u5408\u5f00\u59cb\u65f6\u83b7\u5f97{energyPrefix:energyIcons(1)}\u3002\u5728\u5361\u724c\u5956\u52b1\u753b\u9762\uff0c\u53ef\u4f9b\u9009\u62e9\u7684\u724c\u6570\u51cf\u5c11[blue]2[/blue]\u5f20\u3002",
+            "FLAVOR": "\u7b2c\u4e00\u52c7\u58eb\u7684\u91d1\u51a0\u2026\u2026\u6216\u8005\u53ea\u662f\u4e00\u4e2a\u62d9\u52a3\u7684\u4eff\u5236\u54c1\uff1f"
+        },
+        "CoffeeDripperRelic": {
+            "NAME": "\u5496\u5561\u6ee4\u676f",
+            "DESCRIPTION": "\u5728\u6bcf\u56de\u5408\u5f00\u59cb\u65f6\u83b7\u5f97{energyPrefix:energyIcons(1)}\u3002\u4f60\u65e0\u6cd5\u518d\u5728\u4f11\u606f\u5904[gold]\u4f11\u606f[/gold]\u3002",
+            "FLAVOR": "\u201c\u597d\u7684\uff0c\u8bf7\u518d\u6765\u4e00\u676f\u3002\u7ee7\u7eed\u5de5\u4f5c\uff0c\u7ee7\u7eed\u5de5\u4f5c\uff01\u201d\u2014\u2014\u5efa\u7b51\u5e08"
+        },
+        "CursedKeyRelic": {
+            "NAME": "\u8bc5\u5492\u94a5\u5319",
+            "DESCRIPTION": "\u5728\u6bcf\u56de\u5408\u5f00\u59cb\u65f6\u83b7\u5f97{energyPrefix:energyIcons(1)}\u3002\u4f60\u6bcf\u6b21\u6253\u5f00\u4e00\u4e2a\u975eBoss\u5b9d\u7bb1\uff0c\u90fd\u4f1a\u83b7\u5f97\u4e00\u5f20\u8bc5\u5492\u3002",
+            "FLAVOR": "\u4f60\u80fd\u611f\u5230\u8fd9\u628a\u94a5\u5319\u4e0a\u6563\u53d1\u51fa\u90aa\u6076\u7684\u80fd\u91cf\u3002\u529b\u91cf\u603b\u662f\u9700\u8981\u4ed8\u51fa\u4ee3\u4ef7\u7684\u3002"
+        },
+        "FusionHammerRelic": {
+            "NAME": "\u878d\u5408\u4e4b\u9524",
+            "DESCRIPTION": "\u5728\u6bcf\u56de\u5408\u5f00\u59cb\u65f6\u83b7\u5f97{energyPrefix:energyIcons(1)}\u3002\u4f60\u65e0\u6cd5\u518d\u5728\u4f11\u606f\u5904\u953b\u9020\u5347\u7ea7\u5361\u724c\u3002",
+            "FLAVOR": "\u4e00\u65e6\u63e1\u4f4f\uff0c\u5c31\u6c38\u8fdc\u65e0\u6cd5\u653e\u4e0b\u3002"
+        },
+        "RunicCubeRelic": {
+            "NAME": "\u7b26\u6587\u7acb\u65b9\u4f53",
+            "DESCRIPTION": "\u6bcf\u5f53\u4f60\u5931\u53bb\u751f\u547d\u65f6\uff0c\u62bd[blue]1[/blue]\u5f20\u724c\u3002",
+            "FLAVOR": "\u4e0a\u9762\u7684\u7b26\u6587\u65e0\u6cd5\u8fa8\u8bc6\u3002"
+        },
+        "RunicDomeRelic": {
+            "NAME": "\u7b26\u6587\u5706\u9876",
+            "DESCRIPTION": "\u5728\u6bcf\u56de\u5408\u5f00\u59cb\u65f6\u83b7\u5f97{energyPrefix:energyIcons(1)}\u3002\u4f60\u65e0\u6cd5\u518d\u770b\u89c1\u654c\u4eba\u7684\u610f\u56fe\u3002",
+            "FLAVOR": "\u4e0a\u9762\u7684\u7b26\u6587\u65e0\u6cd5\u8fa8\u8bc6\u3002"
+        },
+        "SacredBarkRelic": {
+            "NAME": "\u795e\u5723\u6811\u76ae",
+            "DESCRIPTION": "\u836f\u6c34\u7684\u6548\u679c\u7ffb\u500d\u3002",
+            "FLAVOR": "\u4f20\u8bf4\u4e2d\u6765\u81ea\u4e8e\u4e16\u754c\u6811\u4e0a\u7684\u4e00\u5757\u6811\u76ae\u3002"
+        },
+        "SlaversCollarRelic": {
+            "NAME": "\u5974\u96b6\u8d29\u5b50\u9888\u73af",
+            "DESCRIPTION": "\u5728Boss\u6218\u4e0e\u7cbe\u82f1\u6218\u4e2d\uff0c\u4f60\u5728\u6bcf\u56de\u5408\u5f00\u59cb\u65f6\u83b7\u5f97{energyPrefix:energyIcons(1)}\u3002",
+            "FLAVOR": "\u9508\u8680\u53ef\u618e\u7684\u94c1\u94fe\u3002"
+        },
+        "TinyHouseRelic": {
+            "NAME": "\u5c0f\u5c4b\u5b50",
+            "DESCRIPTION": "\u62fe\u8d77\u65f6\uff0c\u83b7\u5f97[blue]1[/blue]\u74f6\u836f\u6c34\u3002 \\n \u83b7\u5f97[blue]{Gold}[/blue][gold]\u91d1\u5e01[/gold]\u3002 \\n \u5c06\u4f60\u7684\u6700\u5927\u751f\u547d\u503c\u63d0\u5347[blue]{MaxHp}[/blue]\u3002 \\n \u83b7\u5f97[blue]1[/blue]\u5f20\u724c\u3002 \\n \u968f\u673a\u5347\u7ea7[blue]1[/blue]\u5f20\u724c\u3002",
+            "FLAVOR": "\u201c\u4e00\u9879\u8fd1\u4e4e\u5b8c\u7f8e\u7684\u5fae\u7f29\u5316\u5de5\u7a0b\u3002\u8fd9\u662f\u6211\u81f3\u4eca\u6700\u4f18\u79c0\u7684\u4f5c\u54c1\uff0c\u4f46\u4ecd\u7136\u8fdc\u8fdc\u4e0d\u591f\u3002\u201d\u2014\u2014\u5efa\u7b51\u5e08"
+        },
     },
+}
+
+
+_CUSTOM_ENCHANTMENT_LOC = {
+    "eng": {
+        "BottledEnchantment": {
+            "NAME": "Bottled",
+            "DESCRIPTION": "This card has [gold]Innate[/gold].",
+        },
+    },
+    "zhs": {
+        "BottledEnchantment": {
+            "NAME": "\u88c5\u74f6",
+            "DESCRIPTION": "\u8fd9\u5f20\u724c\u62e5\u6709[gold]\u56fa\u6709[/gold]\u3002",
+        },
+    },
+}
+
+_FORCE_CUSTOM_RELIC_LOCALIZATION = {
+    "ClassicBronzeScales",
+    "CeramicFishRelic",
+    "ToyOrnithopterRelic",
+    "BirdFacedUrnRelic",
+    "BlueCandleRelic",
+    "CalipersRelic",
+    "ClassicNunchaku",
+    "DuVuDollRelic",
+    "PreservedInsectRelic",
+    "SmilingMaskRelic",
+    "SundialRelic",
+    "ThreadAndNeedleRelic",
+    "TinyChestRelic",
+    "MatryoshkaRelic",
+    "OmamoriRelic",
+    "ToriiRelic",
+    "BottledFlameRelic",
+    "BottledLightningRelic",
+    "BottledTornadoRelic",
+    "BustedCrownRelic",
+    "CoffeeDripperRelic",
+    "CursedKeyRelic",
+    "FusionHammerRelic",
+    "RunicCubeRelic",
+    "RunicDomeRelic",
+    "SacredBarkRelic",
+    "SlaversCollarRelic",
+    "TinyHouseRelic",
+    "FrozenCore",
+    "RingOfTheSerpent",
+}
+
+# Some runtime paths can resolve relic localization by either class-derived id
+# (e.g. BUSTED_CROWN_RELIC) or custom/camel id (e.g. bustedCrown).
+# Keep both key styles available for these relics.
+_RELIC_LOC_KEY_ALIASES = {
+    "BUSTED_CROWN_RELIC": "bustedCrown",
+    "COFFEE_DRIPPER_RELIC": "coffeeDripper",
+    "CURSED_KEY_RELIC": "cursedKey",
+    "FUSION_HAMMER_RELIC": "fusionHammer",
+    "RUNIC_CUBE_RELIC": "runicCube",
+    "RUNIC_DOME_RELIC": "runicDome",
+    "SACRED_BARK_RELIC": "sacredBark",
+    "SLAVERS_COLLAR_RELIC": "slaversCollar",
+    "TINY_HOUSE_RELIC": "tinyHouse",
+}
+
+
+# Class-name to STS1 relic ID overrides used by generate_localization().
+# If not listed, class name is matched against STS1 keys using _normalize().
+_CUSTOM_RELIC_STS1_ID_OVERRIDES = {
+    # Existing custom relics
+    "TheSpecimen": "TheSpecimen",
+    "ChampionBelt": "ChampionBelt",
+    "MarkOfPain": "Mark of Pain",
+    "WristBlade": "Wrist Blade",
+    "HoveringKite": "Hovering Kite",
+    "RingOfTheSerpent": "Ring of the Serpent",
+    "FrozenCore": "Frozen Core",
+    "NuclearBattery": "Nuclear Battery",
+    # Shared/common/uncommon/rare/shop relics
+    "ClassicBronzeScales": "Bronze Scales",
+    "OmamoriRelic": "Omamori",
+    "SmilingMaskRelic": "Smiling Mask",
+    "TinyChestRelic": "Tiny Chest",
+    "ClassicNunchaku": "Nunchaku",
+    "PreservedInsectRelic": "PreservedInsect",
+    "CeramicFishRelic": "CeramicFish",
+    "ToyOrnithopterRelic": "Toy Ornithopter",
+    "BlueCandleRelic": "Blue Candle",
+    "BottledFlameRelic": "Bottled Flame",
+    "BottledLightningRelic": "Bottled Lightning",
+    "BottledTornadoRelic": "Bottled Tornado",
+    "MatryoshkaRelic": "Matryoshka",
+    "QuestionCardRelic": "Question Card",
+    "SingingBowlRelic": "Singing Bowl",
+    "SundialRelic": "Sundial",
+    "IncenseBurnerRelic": "Incense Burner",
+    "FossilizedHelixRelic": "FossilizedHelix",
+    "BirdFacedUrnRelic": "Bird Faced Urn",
+    "CalipersRelic": "Calipers",
+    "DuVuDollRelic": "Du-Vu Doll",
+    "DeadBranchRelic": "Dead Branch",
+    "GingerRelic": "Ginger",
+    "MagicFlowerRelic": "Magic Flower",
+    "PeacePipeRelic": "Peace Pipe",
+    "TurnipRelic": "Turnip",
+    "ThreadAndNeedleRelic": "Thread and Needle",
+    "ToriiRelic": "Torii",
+    "FrozenEyeRelic": "Frozen Eye",
+    "MedicalKitRelic": "Medical Kit",
+    "StrangeSpoonRelic": "Strange Spoon",
+    "ClockworkSouvenirRelic": "ClockworkSouvenir",
+    "OrangePelletsRelic": "OrangePellets",
+    "PrismaticShardRelic": "PrismaticShard",
 }
 
 
@@ -1477,6 +1965,7 @@ def generate_localization(sts1_root, project_dir):
     card_loc_by_lang = {}
     relic_loc_by_lang = {}
     power_loc_by_lang = {}
+    enchantment_loc_by_lang = {}
     out_dir_by_lang = {}
 
     for lang in langs:
@@ -1565,15 +2054,72 @@ def generate_localization(sts1_root, project_dir):
             out_dir_by_lang[lang] = out_dir
 
         # --- Relics ---
+        relic_loc = {}
         relic_classes = _find_relic_classes(project_dir)
+        relics_src = os.path.join(sts1_root, "localization", lang, "relics.json")
+        sts1_relics = {}
+        if os.path.isfile(relics_src):
+            with open(relics_src, 'r', encoding='utf-8') as f:
+                sts1_relics = json.load(f)
+
+        if sts1_relics:
+            sts1_index = {}
+            for relic_id in sts1_relics:
+                key = _normalize(relic_id)
+                if key not in sts1_index:
+                    sts1_index[key] = relic_id
+
+            unmatched_relics = []
+            for cls_name in relic_classes:
+                override_id = _CUSTOM_RELIC_STS1_ID_OVERRIDES.get(cls_name)
+                if override_id is None:
+                    base = cls_name
+                    if base.endswith("Relic"):
+                        base = base[:-5]
+                    if base.startswith("Classic") and len(base) > len("Classic"):
+                        base = base[len("Classic"):]
+                    sts1_id = sts1_index.get(_normalize(base))
+                else:
+                    sts1_id = override_id
+
+                if sts1_id and sts1_id in sts1_relics:
+                    entry = sts1_relics[sts1_id]
+                    raw_desc = entry.get("DESCRIPTION", "")
+                    if not raw_desc:
+                        desc_parts = entry.get("DESCRIPTIONS", [])
+                        if isinstance(desc_parts, list):
+                            raw_desc = "".join(str(p) for p in desc_parts)
+                    slug = _slugify(cls_name)
+                    relic_loc[f"{slug}.title"] = entry.get("NAME", cls_name)
+                    relic_loc[f"{slug}.description"] = _convert_sts1_markup_to_sts2(raw_desc)
+                    relic_loc[f"{slug}.flavor"] = entry.get("FLAVOR", "")
+                else:
+                    unmatched_relics.append(cls_name)
+
+            if unmatched_relics:
+                print(f"  WARNING ({lang}): {len(unmatched_relics)} unmatched relics: {', '.join(unmatched_relics)}")
+
+        # Fallback/override entries (keeps bespoke custom wording if explicitly provided)
         relic_src = _CUSTOM_RELIC_LOC.get(lang, {})
-        if relic_src:
-            relic_loc = {}
-            for class_name, entry in relic_src.items():
-                slug = _slugify(class_name)
-                relic_loc[f"{slug}.title"] = entry["NAME"]
-                relic_loc[f"{slug}.description"] = entry["DESCRIPTION"]
-                relic_loc[f"{slug}.flavor"] = entry.get("FLAVOR", "")
+        for class_name, entry in relic_src.items():
+            slug = _slugify(class_name)
+            title_key = f"{slug}.title"
+            desc_key = f"{slug}.description"
+            flavor_key = f"{slug}.flavor"
+            if class_name in _FORCE_CUSTOM_RELIC_LOCALIZATION or title_key not in relic_loc:
+                relic_loc[title_key] = entry["NAME"]
+            if class_name in _FORCE_CUSTOM_RELIC_LOCALIZATION or desc_key not in relic_loc:
+                relic_loc[desc_key] = entry["DESCRIPTION"]
+            if class_name in _FORCE_CUSTOM_RELIC_LOCALIZATION or flavor_key not in relic_loc:
+                relic_loc[flavor_key] = entry.get("FLAVOR", "")
+
+        if relic_loc:
+            for source_slug, alias_slug in _RELIC_LOC_KEY_ALIASES.items():
+                for suffix in ("title", "description", "flavor"):
+                    source_key = f"{source_slug}.{suffix}"
+                    alias_key = f"{alias_slug}.{suffix}"
+                    if source_key in relic_loc and alias_key not in relic_loc:
+                        relic_loc[alias_key] = relic_loc[source_key]
             relic_loc_by_lang[lang] = relic_loc
 
         # --- Powers ---
@@ -1591,6 +2137,16 @@ def generate_localization(sts1_root, project_dir):
                 power_loc[f"{slug}.smartDescription"] = desc
             power_loc_by_lang[lang] = power_loc
 
+        # --- Enchantments ---
+        enchantment_src = _CUSTOM_ENCHANTMENT_LOC.get(lang, {})
+        if enchantment_src:
+            enchantment_loc = {}
+            for class_name, entry in enchantment_src.items():
+                slug = _slugify(class_name)
+                enchantment_loc[f"{slug}.title"] = entry["NAME"]
+                enchantment_loc[f"{slug}.description"] = entry["DESCRIPTION"]
+            enchantment_loc_by_lang[lang] = enchantment_loc
+
     # Run zh cleanup/highlight rules after both language card dictionaries are built.
     for lang in langs:
         if lang in card_loc_by_lang:
@@ -1600,6 +2156,8 @@ def generate_localization(sts1_root, project_dir):
         if lang in power_loc_by_lang:
             _normalize_placeholder_case_in_loc_dict(power_loc_by_lang[lang], f"powers/{lang}")
             _normalize_power_amount_diff(power_loc_by_lang[lang], f"powers/{lang}")
+        if lang in enchantment_loc_by_lang:
+            _normalize_placeholder_case_in_loc_dict(enchantment_loc_by_lang[lang], f"enchantments/{lang}")
 
     # Run zh cleanup/highlight rules after both language dictionaries are built.
     if "eng" in card_loc_by_lang and "zhs" in card_loc_by_lang:
@@ -1608,6 +2166,8 @@ def generate_localization(sts1_root, project_dir):
         _apply_zh_term_highlight_to_loc_dict(relic_loc_by_lang["zhs"], relic_loc_by_lang["eng"], "relics")
     if "eng" in power_loc_by_lang and "zhs" in power_loc_by_lang:
         _apply_zh_term_highlight_to_loc_dict(power_loc_by_lang["zhs"], power_loc_by_lang["eng"], "powers")
+    if "eng" in enchantment_loc_by_lang and "zhs" in enchantment_loc_by_lang:
+        _apply_zh_term_highlight_to_loc_dict(enchantment_loc_by_lang["zhs"], enchantment_loc_by_lang["eng"], "enchantments")
 
     # Write cards.json for each language.
     for lang in langs:
@@ -1627,6 +2187,11 @@ def generate_localization(sts1_root, project_dir):
             with open(os.path.join(out_dir, "powers.json"), 'w', encoding='utf-8') as f:
                 json.dump(power_loc_by_lang[lang], f, ensure_ascii=False, indent=2)
             print(f"  Generated {lang}/powers.json: {len(power_loc_by_lang[lang]) // 2} entries")
+
+        if lang in enchantment_loc_by_lang:
+            with open(os.path.join(out_dir, "enchantments.json"), 'w', encoding='utf-8') as f:
+                json.dump(enchantment_loc_by_lang[lang], f, ensure_ascii=False, indent=2)
+            print(f"  Generated {lang}/enchantments.json: {len(enchantment_loc_by_lang[lang]) // 2} entries")
 
 
 def main():
@@ -1674,6 +2239,10 @@ def main():
     # 4. Copy STS1 relic images
     print("  Copying STS1 relic images...")
     copy_relic_images(sts1_root, pck_root)
+
+    # 4.5 Create custom enchantment icons from cropped relic icons
+    print("  Preparing custom enchantment icons...")
+    copy_custom_enchantment_icons(pck_root)
 
     # 5. Copy selected STS1 power icons (atlas slices) for classic powers
     print("  Importing STS1 power icons...")

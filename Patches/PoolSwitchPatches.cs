@@ -1,6 +1,8 @@
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Characters;
+using MegaCrit.Sts2.Core.Models.RelicPools;
+using MegaCrit.Sts2.Core.Unlocks;
 
 namespace ClassicModeMod;
 
@@ -62,12 +64,12 @@ internal static class IroncladRelicPoolPatch
 {
     static bool Prefix(ref RelicPoolModel __result)
     {
-        if (ClassicConfig.ClassicHybrid)
+        if (ClassicConfig.AddClassicRelics)
         {
             __result = ModelDb.RelicPool<HybridIroncladRelicPool>();
             return false;
         }
-        if (!ClassicConfig.ClassicRelics) return true;
+        if (!ClassicConfig.OnlyClassicRelics) return true;
         __result = ModelDb.RelicPool<ClassicIroncladRelicPool>();
         return false;
     }
@@ -78,12 +80,12 @@ internal static class SilentRelicPoolPatch
 {
     static bool Prefix(ref RelicPoolModel __result)
     {
-        if (ClassicConfig.ClassicHybrid)
+        if (ClassicConfig.AddClassicRelics)
         {
             __result = ModelDb.RelicPool<HybridSilentRelicPool>();
             return false;
         }
-        if (!ClassicConfig.ClassicRelics) return true;
+        if (!ClassicConfig.OnlyClassicRelics) return true;
         __result = ModelDb.RelicPool<ClassicSilentRelicPool>();
         return false;
     }
@@ -94,13 +96,29 @@ internal static class DefectRelicPoolPatch
 {
     static bool Prefix(ref RelicPoolModel __result)
     {
-        if (ClassicConfig.ClassicHybrid)
+        if (ClassicConfig.AddClassicRelics)
         {
             __result = ModelDb.RelicPool<HybridDefectRelicPool>();
             return false;
         }
-        if (!ClassicConfig.ClassicRelics) return true;
+        if (!ClassicConfig.OnlyClassicRelics) return true;
         __result = ModelDb.RelicPool<ClassicDefectRelicPool>();
+        return false;
+    }
+}
+
+[HarmonyPatch(typeof(SharedRelicPool), nameof(SharedRelicPool.GetUnlockedRelics))]
+internal static class SharedRelicPoolPatch
+{
+    static bool Prefix(UnlockState unlockState, ref IEnumerable<RelicModel> __result)
+    {
+        if (ClassicConfig.AddClassicRelics)
+        {
+            __result = ModelDb.RelicPool<HybridSharedRelicPool>().GetUnlockedRelics(unlockState);
+            return false;
+        }
+        if (!ClassicConfig.OnlyClassicRelics) return true;
+        __result = ModelDb.RelicPool<ClassicSharedRelicPool>().GetUnlockedRelics(unlockState);
         return false;
     }
 }

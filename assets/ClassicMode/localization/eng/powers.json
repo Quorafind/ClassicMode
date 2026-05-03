@@ -79,5 +79,8 @@
   "SADISTIC_NATURE_POWER_C.smartDescription": "Whenever you apply a debuff to an enemy, they take [blue]{Amount}[/blue] damage.",
   "MAGNETISM_POWER_C.title": "Magnetism",
   "MAGNETISM_POWER_C.description": "At the start of your turn, add a random colorless card into your hand.",
-  "MAGNETISM_POWER_C.smartDescription": "At the start of your turn, add a random colorless card into your hand."
+  "MAGNETISM_POWER_C.smartDescription": "At the start of your turn, add a random colorless card into your hand.",
+  "CLASSIC_PLATED_ARMOR_POWER_C.title": "Plated Armor",
+  "CLASSIC_PLATED_ARMOR_POWER_C.description": "At the end of your turn, gain [blue]{Amount}[/blue] [gold]Block[/gold]. Whenever you lose HP from an attack, this effect loses 1 stack.",
+  "CLASSIC_PLATED_ARMOR_POWER_C.smartDescription": "At the end of your turn, gain [blue]{Amount}[/blue] [gold]Block[/gold]. Whenever you lose HP from an attack, this effect loses 1 stack."
 }

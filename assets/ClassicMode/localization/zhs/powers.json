@@ -79,5 +79,8 @@
   "SADISTIC_NATURE_POWER_C.smartDescription": "每当你给敌人施加负面状态时，使其受到[blue]{Amount}[/blue]点伤害。",
   "MAGNETISM_POWER_C.title": "磁力",
   "MAGNETISM_POWER_C.description": "在你的回合开始时，将1张随机无色牌加入手牌。",
-  "MAGNETISM_POWER_C.smartDescription": "在你的回合开始时，将1张随机无色牌加入手牌。"
+  "MAGNETISM_POWER_C.smartDescription": "在你的回合开始时，将1张随机无色牌加入手牌。",
+  "CLASSIC_PLATED_ARMOR_POWER_C.title": "多层护甲",
+  "CLASSIC_PLATED_ARMOR_POWER_C.description": "在你的回合结束时获得[blue]{Amount}[/blue]点[gold]格挡[/gold]。受到[gold]攻击[/gold]伤害而失去生命时，该效果层数将减少1。",
+  "CLASSIC_PLATED_ARMOR_POWER_C.smartDescription": "在你的回合结束时获得[blue]{Amount}[/blue]点[gold]格挡[/gold]。受到[gold]攻击[/gold]伤害而失去生命时，该效果层数将减少1。"
 }

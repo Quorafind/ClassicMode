@@ -1,0 +1,6 @@
+{
+  "OPTION_TOKE.name": "抽烟",
+  "OPTION_TOKE.description": "从牌组中移除一张牌。",
+  "OPTION_TOKE.descriptionDisabled": "牌组中没有可移除的卡牌。"
+}
+

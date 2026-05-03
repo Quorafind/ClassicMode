@@ -37,3 +37,13 @@ public sealed class HybridDefectRelicPool : RelicPoolModel
             ModelDb.RelicPool<DefectRelicPool>(),
             ModelDb.RelicPool<ClassicDefectRelicPool>());
 }
+
+public sealed class HybridSharedRelicPool : RelicPoolModel
+{
+    public override string EnergyColorName => "colorless";
+
+    protected override IEnumerable<RelicModel> GenerateAllRelics() =>
+        HybridPoolHelper.MergeRelics(
+            ModelDb.RelicPool<SharedRelicPool>(),
+            ModelDb.RelicPool<ClassicSharedRelicPool>());
+}

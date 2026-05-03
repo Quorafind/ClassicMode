@@ -1,0 +1,95 @@
+STS1-vs-STS2 relic comparison (source: desktop-1.0 localization/eng/relics.json)
+Method:
+- STS1 keys from desktop-1.0/localization/eng/relics.json
+- STS2 relic class names from proj/MegaCrit.Sts2.Core.Models.Relics/*.cs
+- Classic custom relic classes from ClassicMode/Relics/*.cs (classes extending ClassicRelic)
+- Normalization: lowercase, remove punctuation/spaces, trim trailing "2", trim leading "the"
+- Excluded deprecated/test placeholders: Test 1-8, Chameleon Ring, Living Blade, Nullstone Periapt, Derp Rock
+
+Potential missing (refined): 85
+
+Ancient Tea Set
+Bird Faced Urn
+Bloody Idol
+Blue Candle
+Bottled Flame
+Bottled Lightning
+Bottled Tornado
+Busted Crown
+Cables
+Calipers
+CeramicFish
+ClockworkSouvenir
+Coffee Dripper
+CultistMask
+Cursed Key
+Damaru
+Dead Branch
+Discerning Monocle
+Dodecahedron
+Du-Vu Doll
+Enchiridion
+FaceOfCleric
+FossilizedHelix
+Frozen Eye
+Fusion Hammer
+Ginger
+Golden Idol
+GoldenEye
+GremlinMask
+HolyWater
+Incense Burner
+InkBottle
+Lee's Waffle
+Magic Flower
+Mark of the Bloom
+Matryoshka
+Medical Kit
+Melange
+Mercury Hourglass
+MutagenicStrength
+Necronomicon
+NeowsBlessing
+Nilry's Codex
+Nloth's Gift
+NlothsMask
+Odd Mushroom
+Oddly Smooth Stone
+Omamori
+OrangePellets
+Paper Crane
+Paper Frog
+Peace Pipe
+PreservedInsect
+PrismaticShard
+PureWater
+Question Card
+Red Circlet
+Ring of the Serpent
+Runic Cube
+Runic Dome
+SacredBark
+Singing Bowl
+SlaversCollar
+Sling
+Smiling Mask
+Snake Skull
+Spirit Poop
+SsserpentHead
+Strange Spoon
+Sundial
+Symbiotic Virus
+TeardropLocket
+Thread and Needle
+Tiny Chest
+Tiny House
+Torii
+Toy Ornithopter
+Turnip
+Unceasing Top
+VioletLotus
+WarpedTongs
+White Beast Statue
+WingedGreaves
+Yang
+Yin

@@ -1,8 +1,12 @@
 {
     "CLASSIC_CUSTOM_CARDS.title": "Classic Character Cards",
     "CLASSIC_CUSTOM_CARDS.description": "Use Slay the Spire 1 card pools for your selected character.",
-    "CLASSIC_CUSTOM_RELICS.title": "Classic Relics",
-    "CLASSIC_CUSTOM_RELICS.description": "Use Slay the Spire 1 relic pools for your selected character.",
+    "CLASSIC_CUSTOM_ADD_RELICS.title": "Add Classic Relics",
+    "CLASSIC_CUSTOM_ADD_RELICS.description": "Add non-duplicate STS1 relics into STS2 common/uncommon/rare/shop relic pools.",
+    "CLASSIC_CUSTOM_ONLY_RELICS.title": "Only Classic Relics",
+    "CLASSIC_CUSTOM_ONLY_RELICS.description": "Use STS1 common/uncommon/rare/shop relic pools only. Mutually exclusive with Add Classic Relics.",
+    "CLASSIC_CUSTOM_RELICS.title": "Only Classic Relics",
+    "CLASSIC_CUSTOM_RELICS.description": "Legacy alias for Only Classic Relics.",
     "CLASSIC_CUSTOM_HYBRID.title": "Hybrid Character Cards",
     "CLASSIC_CUSTOM_HYBRID.description": "Merge STS1 and STS2 card/relic pools. Mutually exclusive with Classic Cards.",
     "CLASSIC_CUSTOM_HYBRID_DEDUPE.title": "Dedupe Overlaps",
@@ -14,5 +18,7 @@
     "CLASSIC_CUSTOM_COLORLESS_DEDUPE.title": "Colorless Dedupe",
     "CLASSIC_CUSTOM_COLORLESS_DEDUPE.description": "Hybrid Colorless only: remove same-name overlaps so STS2 versions win.",
     "CLASSIC_CUSTOM_COLORLESS_REWARDS.title": "Colorless Card Rewards",
-    "CLASSIC_CUSTOM_COLORLESS_REWARDS.description": "Colorless cards can appear in combat card rewards."
+    "CLASSIC_CUSTOM_COLORLESS_REWARDS.description": "Colorless cards can appear in combat card rewards.",
+    "CLASSIC_CUSTOM_REPLACE_ANCIENTS.title": "Replace Ancients With Darv",
+    "CLASSIC_CUSTOM_REPLACE_ANCIENTS.description": "Force Act2/Act3 ancient events to Darv; Darv offers 3 random unowned STS1 boss relics."
 }
