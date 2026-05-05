@@ -4,11 +4,13 @@ using System.Reflection;
 using System.Threading.Tasks;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Events;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Acts;
+using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Models.Events;
 using MegaCrit.Sts2.Core.Models.Relics;
 
@@ -23,6 +25,142 @@ internal static class DarvRelicDescriptionHelper
         description.Add("energyPrefix", "");
         description.Add("singleStarIcon", "[img]res://images/packed/sprite_fonts/star_icon.png[/img]");
         return description;
+    }
+}
+
+internal static class ClassicDarvRelicPoolHelper
+{
+    private static readonly IReadOnlySet<ModelId> DarvExcludedRelicIds = new HashSet<ModelId>
+    {
+        ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.BlackBlood>().Id,
+        ModelDb.Relic<RingOfTheSerpent>().Id,
+        ModelDb.Relic<FrozenCore>().Id,
+    };
+
+    private static IEnumerable<RelicModel> ApplyDarvPoolExclusions(IEnumerable<RelicModel> source)
+    {
+        return source.Where(r => !DarvExcludedRelicIds.Contains(r.Id));
+    }
+
+    private static IEnumerable<RelicModel> ApplyDarvGlobalInclusions(IEnumerable<RelicModel> source)
+    {
+        // Keep Touch of Orobas available to every character in Darv options.
+        return source.Concat(new[] { ModelDb.Relic<TouchOfOrobas>() });
+    }
+
+    private static IReadOnlyList<RelicModel> NormalizeDarvPool(IEnumerable<RelicModel> source)
+    {
+        return ApplyDarvGlobalInclusions(ApplyDarvPoolExclusions(source))
+            .GroupBy(r => r.Id)
+            .Select(g => g.First())
+            .ToList();
+    }
+
+    internal static IReadOnlyList<RelicModel> GetCandidatesForPlayer(MegaCrit.Sts2.Core.Entities.Players.Player owner)
+    {
+        if (IsIroncladLike(owner))
+        {
+            var allowed = GetIroncladAllowedIds();
+            return NormalizeDarvPool(GetIroncladDarvBossCandidates().Where(r => allowed.Contains(r.Id)));
+        }
+
+        string colorKey = ResolveCharacterColorKey(owner);
+        IEnumerable<RelicModel> sharedAncients = ModelDb.RelicPool<ClassicSharedRelicPool>().AllRelics
+            .Where(r => r.Rarity == RelicRarity.Ancient);
+
+        IEnumerable<RelicModel> characterAncients = GetCharacterAncients(colorKey);
+
+        return NormalizeDarvPool(sharedAncients.Concat(characterAncients));
+    }
+
+    internal static IReadOnlyList<RelicModel> GetCandidatesForUnknownOwner()
+    {
+        return NormalizeDarvPool(ModelDb.RelicPool<ClassicSharedRelicPool>().AllRelics
+            .Where(r => r.Rarity == RelicRarity.Ancient));
+    }
+
+    internal static IReadOnlyList<RelicModel> GetAllCandidatesForCollection()
+    {
+        return NormalizeDarvPool(ModelDb.RelicPool<ClassicSharedRelicPool>().AllRelics
+            .Concat(ModelDb.RelicPool<ClassicIroncladRelicPool>().AllRelics)
+            .Concat(ModelDb.RelicPool<ClassicSilentRelicPool>().AllRelics)
+            .Concat(ModelDb.RelicPool<ClassicDefectRelicPool>().AllRelics)
+            .Where(r => r.Rarity == RelicRarity.Ancient));
+    }
+
+    private static IEnumerable<RelicModel> GetCharacterAncients(string colorKey)
+    {
+        IEnumerable<RelicModel> pool = colorKey switch
+        {
+            "ironclad" => ModelDb.RelicPool<ClassicIroncladRelicPool>().AllRelics,
+            "silent" => ModelDb.RelicPool<ClassicSilentRelicPool>().AllRelics,
+            "defect" => ModelDb.RelicPool<ClassicDefectRelicPool>().AllRelics,
+            _ => Enumerable.Empty<RelicModel>()
+        };
+
+        return pool.Where(r => r.Rarity == RelicRarity.Ancient);
+    }
+
+    private static string ResolveCharacterColorKey(MegaCrit.Sts2.Core.Entities.Players.Player owner)
+    {
+        string? byPool = owner.Character?.RelicPool?.EnergyColorName;
+        if (!string.IsNullOrWhiteSpace(byPool))
+            return byPool.Trim().ToLowerInvariant();
+
+        string? id = owner.Character?.Id.Entry;
+        if (string.Equals(id, "Ironclad", System.StringComparison.OrdinalIgnoreCase)) return "ironclad";
+        if (string.Equals(id, "Silent", System.StringComparison.OrdinalIgnoreCase)) return "silent";
+        if (string.Equals(id, "Defect", System.StringComparison.OrdinalIgnoreCase)) return "defect";
+        return string.Empty;
+    }
+
+    private static IEnumerable<RelicModel> GetIroncladDarvBossCandidates()
+    {
+        // STS1 rule target for Ironclad: Boss relics with color empty or Red.
+        return new RelicModel[]
+        {
+            // Colorless Boss relics (empty color in sts1export)
+            ModelDb.Relic<Astrolabe>(),
+            ModelDb.Relic<BlackStar>(),
+            ModelDb.Relic<CallingBell>(),
+            ModelDb.Relic<CoffeeDripperRelic>(),
+            ModelDb.Relic<CursedKeyRelic>(),
+            ModelDb.Relic<Ectoplasm>(),
+            ModelDb.Relic<EmptyCage>(),
+            ModelDb.Relic<FusionHammerRelic>(),
+            ModelDb.Relic<PandorasBox>(),
+            ModelDb.Relic<PhilosophersStone>(),
+            ModelDb.Relic<RunicDomeRelic>(),
+            ModelDb.Relic<RunicPyramid>(),
+            ModelDb.Relic<SacredBarkRelic>(),
+            ModelDb.Relic<SlaversCollarRelic>(),
+            ModelDb.Relic<SneckoEye>(),
+            ModelDb.Relic<Sozu>(),
+            ModelDb.Relic<TinyHouseRelic>(),
+            ModelDb.Relic<VelvetChoker>(),
+            ModelDb.Relic<BustedCrownRelic>(),
+            ModelDb.Relic<TouchOfOrobas>(),
+
+            // Red Boss relics
+            ModelDb.Relic<MarkOfPain>(),
+            ModelDb.Relic<RunicCubeRelic>(),
+        };
+    }
+
+    internal static bool IsIroncladLike(MegaCrit.Sts2.Core.Entities.Players.Player owner)
+    {
+        if (owner.Character is Ironclad)
+            return true;
+
+        if (owner.Character?.Id == ModelDb.Character<Ironclad>().Id)
+            return true;
+
+        return string.Equals(owner.Character?.RelicPool?.EnergyColorName, "ironclad", System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static IReadOnlySet<ModelId> GetIroncladAllowedIds()
+    {
+        return GetIroncladDarvBossCandidates().Select(r => r.Id).ToHashSet();
     }
 }
 
@@ -54,37 +192,28 @@ internal static class DarvClassicBossOptionsPatch
 
     static bool Prefix(Darv __instance, ref IReadOnlyList<EventOption> __result)
     {
-        if (!ClassicConfig.ReplaceAncientsWithDarv || AncientDoneMethod == null)
+        if (!ClassicConfig.ReplaceAncientsWithDarv)
             return true;
 
         var owner = __instance.Owner;
-        if (owner == null)
-            return true;
+        List<RelicModel> pool = owner == null
+            ? ClassicDarvRelicPoolHelper.GetCandidatesForUnknownOwner().ToList()
+            : ClassicDarvRelicPoolHelper.GetCandidatesForPlayer(owner).ToList();
 
-        var pool = GetClassicBossRelicPool();
-        var owned = owner.Relics.Select(r => r.Id).ToHashSet();
-        var candidates = pool.Where(r => !owned.Contains(r.Id)).ToList();
-        if (candidates.Count < 3)
-            candidates = pool.ToList();
+        // Uniform sample without replacement from the full eligible set.
+        if (owner != null)
+            owner.PlayerRng.Rewards.Shuffle(pool);
 
-        owner.PlayerRng.Rewards.Shuffle(candidates);
-        var picks = candidates.Take(3).DistinctBy(r => r.Id).ToList();
-        if (picks.Count < 3)
-            return true;
+        var picks = pool.Take(3).DistinctBy(r => r.Id).ToList();
 
-        var options = new List<EventOption>(3);
+        var options = new List<EventOption>(picks.Count);
         foreach (var relic in picks)
         {
             options.Add(CreateSafeRelicOption(__instance, relic));
         }
 
-        if (options.Count == 3)
-        {
-            __result = options;
-            return false;
-        }
-
-        return true;
+        __result = options;
+        return false;
     }
 
     private static EventOption CreateSafeRelicOption(Darv darv, RelicModel relicModel)
@@ -110,39 +239,6 @@ internal static class DarvClassicBossOptionsPatch
         AncientDoneMethod?.Invoke(darv, null);
     }
 
-    private static IReadOnlyList<RelicModel> GetClassicBossRelicPool()
-    {
-        return
-        [
-            ModelDb.Relic<Astrolabe>(),
-            ModelDb.Relic<BlackBlood>(),
-            ModelDb.Relic<BlackStar>(),
-            ModelDb.Relic<BustedCrownRelic>(),
-            ModelDb.Relic<CallingBell>(),
-            ModelDb.Relic<CoffeeDripperRelic>(),
-            ModelDb.Relic<CursedKeyRelic>(),
-            ModelDb.Relic<Ectoplasm>(),
-            ModelDb.Relic<EmptyCage>(),
-            ModelDb.Relic<FusionHammerRelic>(),
-            ModelDb.Relic<HoveringKite>(),
-            ModelDb.Relic<Inserter>(),
-            ModelDb.Relic<MarkOfPain>(),
-            ModelDb.Relic<NuclearBattery>(),
-            ModelDb.Relic<PandorasBox>(),
-            ModelDb.Relic<PhilosophersStone>(),
-            ModelDb.Relic<RunicCubeRelic>(),
-            ModelDb.Relic<RunicDomeRelic>(),
-            ModelDb.Relic<RunicPyramid>(),
-            ModelDb.Relic<SacredBarkRelic>(),
-            ModelDb.Relic<SneckoEye>(),
-            ModelDb.Relic<Sozu>(),
-            ModelDb.Relic<SlaversCollarRelic>(),
-            ModelDb.Relic<TinyHouseRelic>(),
-            ModelDb.Relic<TouchOfOrobas>(),
-            ModelDb.Relic<VelvetChoker>(),
-            ModelDb.Relic<WristBlade>()
-        ];
-    }
 }
 
 [HarmonyPatch(typeof(Darv), nameof(Darv.AllPossibleOptions), MethodType.Getter)]
@@ -157,7 +253,7 @@ internal static class DarvAllPossibleOptionsPatch
             .Select(o => o.Relic!.Id)
             .ToHashSet();
 
-        foreach (var relic in DarvClassicBossOptionsPatch_GetBossRelicsForCollection())
+        foreach (var relic in ClassicDarvRelicPoolHelper.GetAllCandidatesForCollection())
         {
             if (!existingRelicIds.Add(relic.Id))
                 continue;
@@ -171,21 +267,5 @@ internal static class DarvAllPossibleOptionsPatch
         }
 
         __result = baseOptions;
-    }
-
-    private static IReadOnlyList<RelicModel> DarvClassicBossOptionsPatch_GetBossRelicsForCollection()
-    {
-        return
-        [
-            ModelDb.Relic<BustedCrownRelic>(),
-            ModelDb.Relic<CoffeeDripperRelic>(),
-            ModelDb.Relic<CursedKeyRelic>(),
-            ModelDb.Relic<FusionHammerRelic>(),
-            ModelDb.Relic<RunicCubeRelic>(),
-            ModelDb.Relic<RunicDomeRelic>(),
-            ModelDb.Relic<SacredBarkRelic>(),
-            ModelDb.Relic<SlaversCollarRelic>(),
-            ModelDb.Relic<TinyHouseRelic>()
-        ];
     }
 }

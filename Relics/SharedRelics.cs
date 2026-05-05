@@ -56,7 +56,7 @@ public sealed class ClassicBronzeScales : ClassicRelic
 
 public sealed class OmamoriRelic : ClassicRelic
 {
-    private int _remainingNegates;
+    private int _remainingNegates = 2;
 
     public OmamoriRelic() : base("omamori") { }
 
@@ -80,15 +80,9 @@ public sealed class OmamoriRelic : ClassicRelic
             DynamicVars["Negates"].BaseValue = negates;
             if (CanonicalInstance != null && !ReferenceEquals(CanonicalInstance, this))
                 CanonicalInstance.DynamicVars["Negates"].BaseValue = negates;
+            Status = negates > 0m ? RelicStatus.Normal : RelicStatus.Disabled;
             InvokeDisplayAmountChanged();
         }
-    }
-
-    public override Task AfterObtained()
-    {
-        if (RemainingNegates <= 0)
-            RemainingNegates = 2;
-        return Task.CompletedTask;
     }
 
     public override bool ShouldAddToDeck(CardModel card)
@@ -458,13 +452,16 @@ public sealed class BottledTornadoRelic : ClassicBottleRelic
 
 public sealed class MatryoshkaRelic : ClassicRelic
 {
-    private int _remainingChests;
+    private int _remainingChests = 2;
+    private int _treasureRoomsEntered;
+    private int _lastProcessedTreasureRoomEntry;
 
     public MatryoshkaRelic() : base("matryoshka") { }
 
     public override RelicRarity Rarity => RelicRarity.Uncommon;
 
-    public override bool ShowCounter => true;
+    public override bool IsUsedUp => RemainingChests <= 0;
+    public override bool ShowCounter => !IsUsedUp;
     public override int DisplayAmount => RemainingChests;
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
@@ -482,25 +479,64 @@ public sealed class MatryoshkaRelic : ClassicRelic
             DynamicVars["ChestsLeft"].BaseValue = chestsLeft;
             if (CanonicalInstance != null && !ReferenceEquals(CanonicalInstance, this))
                 CanonicalInstance.DynamicVars["ChestsLeft"].BaseValue = chestsLeft;
+            Status = chestsLeft > 0m ? RelicStatus.Normal : RelicStatus.Disabled;
             InvokeDisplayAmountChanged();
         }
     }
 
-    public override Task AfterObtained()
+    [SavedProperty]
+    public int TreasureRoomsEntered
     {
-        if (RemainingChests <= 0)
-            RemainingChests = 2;
+        get => _treasureRoomsEntered;
+        set
+        {
+            AssertMutable();
+            _treasureRoomsEntered = value;
+        }
+    }
+
+    [SavedProperty]
+    public int LastProcessedTreasureRoomEntry
+    {
+        get => _lastProcessedTreasureRoomEntry;
+        set
+        {
+            AssertMutable();
+            _lastProcessedTreasureRoomEntry = value;
+        }
+    }
+
+    public override Task AfterRoomEntered(AbstractRoom room)
+    {
+        if (room is TreasureRoom)
+            TreasureRoomsEntered++;
         return Task.CompletedTask;
     }
 
-    public override bool TryModifyRewards(Player player, List<Reward> rewards, AbstractRoom? room)
+    private bool CanGrantExtraTreasureReward(Player player, AbstractRoom? room)
     {
         if (player != Owner || RemainingChests <= 0)
             return false;
         if (room is not TreasureRoom)
             return false;
+        if (!ReferenceEquals(player.RunState.CurrentRoom, room))
+            return false;
 
-        rewards.Add(new RelicReward(player));
+        // Guard against duplicate processing for the same entered treasure room.
+        return TreasureRoomsEntered > LastProcessedTreasureRoomEntry;
+    }
+
+    public override bool TryModifyRewards(Player player, List<Reward> rewards, AbstractRoom? room)
+    {
+        if (!CanGrantExtraTreasureReward(player, room))
+            return false;
+
+        RelicRarity rarity = RelicFactory.RollRarity(player.RunState.Rng.TreasureRoomRelics);
+        RelicModel relic = player.RunState.SharedRelicGrabBag.PullFromFront(rarity, player.RunState)
+            ?? RelicFactory.FallbackRelic;
+
+        rewards.Add(new RelicReward(relic.ToMutable(), player));
+        LastProcessedTreasureRoomEntry = TreasureRoomsEntered;
         RemainingChests--;
         Flash();
         return true;
