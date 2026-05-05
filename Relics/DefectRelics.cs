@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Orbs;
+using MegaCrit.Sts2.Core.Saves.Runs;
 
 namespace ClassicModeMod;
 
@@ -64,10 +65,16 @@ public sealed class Inserter : ClassicRelic
     protected override IEnumerable<DynamicVar> CanonicalVars =>
         [new DynamicVar("Turns", 2m)];
 
+    [SavedProperty]
     private int TurnsElapsed
     {
         get => _turnsElapsed;
-        set { AssertMutable(); _turnsElapsed = value; }
+        set
+        {
+            AssertMutable();
+            _turnsElapsed = value;
+            InvokeDisplayAmountChanged();
+        }
     }
 
     public override async Task AfterSideTurnStart(CombatSide side, ICombatState combatState)
@@ -81,7 +88,6 @@ public sealed class Inserter : ClassicRelic
             Flash();
             await OrbCmd.AddSlots(Owner, 1);
         }
-        InvokeDisplayAmountChanged();
     }
 
     public override Task BeforeSideTurnStart(PlayerChoiceContext choiceContext, CombatSide side, ICombatState combatState)
